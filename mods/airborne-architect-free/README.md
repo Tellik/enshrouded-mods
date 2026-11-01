@@ -32,8 +32,9 @@ each client that should see the zero-point price and Root link in its Skills
 screen**. Client and server each load their own skill-tree asset. With only the
 client modded, the UI shows zero points but clicking the skill leaves it locked
 on an unmodded dedicated server. A server installation alone has not been shown
-to update an unmodded client's UI. Unlocking with both sides modded still needs
-an in-game check. Hosted co-op needs a separate host-and-guest check.
+to update an unmodded client's UI. With both sides modded, unlocking, refunding,
+and unlocking again worked on a private dedicated test server. Hosted co-op
+needs a separate host-and-guest check.
 
 On Linux/Proton, ShroudForge's DLLs may need the Steam launch option:
 
@@ -47,8 +48,9 @@ In the ShroudForge log, find `Free Airborne Architect: cost 0; free Root link
 ready`. Then open Skills (H): Airborne Architect should show **0** points,
 be reachable from a Root node, and unlock without reducing the available
 points. For a dedicated server, check the same result with a connected client
-and confirm it remains after reconnecting. Dedicated-server gameplay has not
-yet been verified for this package.
+and confirm it remains after reconnecting. The private dedicated-server test
+verified unlock, refund, and repeat unlock; reconnect persistence and the exact
+skill-point count after each action were not recorded.
 
 To disable, set `"enabled": false` in `extended.mod.json` and restart the
 process. To remove it, close the game or stop the server and delete the mod
