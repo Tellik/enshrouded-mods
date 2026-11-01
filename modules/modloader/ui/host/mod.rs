@@ -1,6 +1,7 @@
 mod apply_language_change;
 mod apply_loader_setting;
 mod apply_loader_settings;
+mod assess_hotkey_change;
 mod apply_mod_enabled;
 mod apply_mod_settings;
 mod change_notice_read_state;
@@ -41,6 +42,7 @@ mod read_window_focus;
 mod record_ui_log;
 mod refresh_activity_log;
 mod refresh_installed_mod;
+mod refresh_ui_snapshot;
 mod reload_loader_settings;
 mod report_command_result;
 mod request_diagnostics;

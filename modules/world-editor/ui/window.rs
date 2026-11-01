@@ -41,7 +41,7 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
     let mut toggle_key = shroudforge_hotkeys::parse_value(&preferences["toggleKey"])?;
     let refresh_ms = preferences["refreshMilliseconds"]
         .as_u64()
-        .unwrap_or(400)
+        .unwrap_or(1000)
         .clamp(100, 5000);
     let initial_state = view_state(&arguments.root).unwrap_or_else(|_| empty_state());
     let initial_window_state = shroudforge_loader_config::config::window_state(&arguments.root);
@@ -102,6 +102,7 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
         .with_html(html)
         .with_ipc_handler(handler)
         .build(&window)?;
+    let _ = webview.set_visible(window.is_visible());
     // The document paints the opaque panel. The Tao background matches its
     // dark base color so uncovered client pixels cannot flash white.
     log_world_editor(
@@ -120,17 +121,23 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
     let mut library_expanded_height = initial_state.panel_height;
     let mut module_enabled = preferences["enabled"] != false;
     let mut native_visible = false;
+    let mut state_watcher_active = false;
     let _ = shroudforge_loader_config::config::publish_window_visibility(
         &arguments.root,
         "worldEditor",
         module_enabled && window_visible,
     );
-    let mut toggle_down = false;
+    let initial_toggle_press_revision = toggle_key
+        .as_ref()
+        .map_or(0, shroudforge_hotkeys::hotkey_press_revision);
+    let mut toggle_debouncer =
+        shroudforge_hotkeys::WindowToggleDebouncer::new(initial_toggle_press_revision);
     let mut next_visibility_poll = Instant::now();
     let mut next_settings_poll = Instant::now();
     // Keep disk enumeration and thumbnail reads off the window thread.
     // Bound the channel so slow rendering cannot accumulate snapshots.
-    let state_updates = watch_editor_state(arguments.root.clone(), refresh_ms);
+    let (state_updates, state_watcher_visibility) =
+        watch_editor_state(arguments.root.clone(), refresh_ms);
     let mut next_refresh = Instant::now();
     let mut last_payload = String::new();
     let mut last_ui_surface = String::new();
@@ -274,7 +281,10 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
                         if let Ok(next_key) = shroudforge_hotkeys::parse_value(&config["modules"]["worldEditor"]["toggleKey"]) {
                             if next_key != toggle_key {
                                 toggle_key = next_key;
-                                toggle_down = toggle_key.as_ref().is_some_and(shroudforge_hotkeys::is_hotkey_down);
+                                let current_press_revision = toggle_key
+                                    .as_ref()
+                                    .map_or(0, shroudforge_hotkeys::hotkey_press_revision);
+                                toggle_debouncer.reset(current_press_revision);
                             }
                         }
                         let next_enabled = config["modules"]["worldEditor"]["enabled"] != false;
@@ -302,7 +312,7 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
-                    next_settings_poll = Instant::now() + Duration::from_millis(300);
+                    next_settings_poll = Instant::now() + Duration::from_secs(1);
                 }
 
                 let foreground = unsafe { GetForegroundWindow() };
@@ -311,26 +321,29 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
                 let is_game = !arguments.desktop && foreground_pid == arguments.game_pid;
                 let is_overlay = !arguments.desktop
                     && foreground_pid == unsafe { GetCurrentProcessId() };
-                let toggle = toggle_key.as_ref().is_some_and(shroudforge_hotkeys::is_hotkey_down);
-                let toggle_pressed = toggle && !toggle_down;
-                if module_enabled && (is_game || is_overlay) && !shroudforge_hotkeys::is_capture_active() {
+                let toggle_press_revision = toggle_key
+                    .as_ref()
+                    .map_or(0, shroudforge_hotkeys::hotkey_press_revision);
+                if toggle_debouncer.should_toggle(toggle_press_revision, || {
+                    module_enabled
+                        && (is_game || is_overlay)
+                        && !shroudforge_hotkeys::is_capture_active()
+                }) {
                     let was_visible = window_visible;
-                    if toggle_pressed {
-                        window_visible = !window_visible;
-                        if window_visible {
-                            let height = if manager_open {
-                                560.0
-                            } else if library_expanded {
-                                library_expanded_height as f64
-                            } else {
-                                panel_height as f64
-                            };
-                            set_fixed_size(&window, panel_width, height);
-                            window.set_inner_size(LogicalSize::new(
-                                panel_width as f64,
-                                height,
-                            ));
-                        }
+                    window_visible = !window_visible;
+                    if window_visible {
+                        let height = if manager_open {
+                            560.0
+                        } else if library_expanded {
+                            library_expanded_height as f64
+                        } else {
+                            panel_height as f64
+                        };
+                        set_fixed_size(&window, panel_width, height);
+                        window.set_inner_size(LogicalSize::new(
+                            panel_width as f64,
+                            height,
+                        ));
                     }
                     if was_visible != window_visible {
                         let _ = shroudforge_loader_config::config::request_window_visibility(
@@ -340,7 +353,6 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
                         );
                     }
                 }
-                toggle_down = toggle;
                 let should_show = module_enabled && window_visible && (is_game || is_overlay);
                 if should_show != native_visible {
                     native_visible = should_show;
@@ -356,51 +368,60 @@ pub(crate) fn run_module() -> Result<(), Box<dyn std::error::Error>> {
                         if native_visible { "World Editor window shown." } else { "World Editor window hidden." },
                     );
                 }
+                let refresh_window_visible = window.is_visible() && !window.is_minimized();
+                if refresh_window_visible != state_watcher_active {
+                    state_watcher_active = refresh_window_visible;
+                    let _ = webview.set_visible(state_watcher_active);
+                    let _ = state_watcher_visibility.send(state_watcher_active);
+                    if state_watcher_active {
+                        next_refresh = Instant::now();
+                    }
+                }
+                if !state_watcher_active {
+                    let _ = state_updates.try_iter().last();
+                }
                 if Instant::now() >= next_refresh {
-                    if let Some(state) = state_updates.try_iter().last() {
-                        if let Ok(payload) = serde_json::to_string(&state) {
-                            let state_changed = payload != last_payload;
-                            if state_changed {
-                                if state.panel_width != panel_width
-                                    || state.panel_height != panel_height
-                                    || state.panel_position_x != panel_position_x
-                                    || state.panel_position_y != panel_position_y
-                                {
-                                    panel_width = state.panel_width;
-                                    panel_height = state.panel_height;
-                                    panel_position_x = state.panel_position_x;
-                                    panel_position_y = state.panel_position_y;
-                                    let height = if manager_open {
-                                        560.0
-                                    } else if library_expanded {
-                                        library_expanded_height as f64
-                                    } else {
-                                        panel_height as f64
-                                    };
-                                    set_fixed_size(&window, panel_width, height);
-                                    window.set_inner_size(LogicalSize::new(
-                                        panel_width as f64,
-                                        height,
-                                    ));
-                                    position_window(
-                                        &window,
-                                        arguments.game_pid,
-                                        panel_width as f64,
-                                        panel_position_x,
-                                        panel_position_y,
-                                    );
-                                }
-                                last_payload = payload.clone();
-                            }
-                            let script = super::fallback::render_script(&last_payload);
-                            if let Err(error) = webview.evaluate_script(&script) {
-                                log_world_editor(
-                                    &arguments.root,
-                                    'E',
-                                    "ui",
-                                    &format!("Could not send the visible interface state to the window: {error}"),
-                                );
-                            }
+                    if state_watcher_active
+                        && let Some(state) = state_updates.try_iter().last()
+                        && let Ok(payload) = serde_json::to_string(&state)
+                        && payload != last_payload
+                    {
+                        if state.panel_width != panel_width
+                            || state.panel_height != panel_height
+                            || state.panel_position_x != panel_position_x
+                            || state.panel_position_y != panel_position_y
+                        {
+                            panel_width = state.panel_width;
+                            panel_height = state.panel_height;
+                            panel_position_x = state.panel_position_x;
+                            panel_position_y = state.panel_position_y;
+                            let height = if manager_open {
+                                560.0
+                            } else if library_expanded {
+                                library_expanded_height as f64
+                            } else {
+                                panel_height as f64
+                            };
+                            set_fixed_size(&window, panel_width, height);
+                            window.set_inner_size(LogicalSize::new(panel_width as f64, height));
+                            position_window(
+                                &window,
+                                arguments.game_pid,
+                                panel_width as f64,
+                                panel_position_x,
+                                panel_position_y,
+                            );
+                        }
+                        let script = super::fallback::render_script(&payload);
+                        if let Err(error) = webview.evaluate_script(&script) {
+                            log_world_editor(
+                                &arguments.root,
+                                'E',
+                                "ui",
+                                &format!("Could not send the visible interface state to the window: {error}"),
+                            );
+                        } else {
+                            last_payload = payload;
                         }
                     }
                     next_refresh = Instant::now() + Duration::from_millis(refresh_ms);

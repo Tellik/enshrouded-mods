@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "general": {
-    "locale": "de",
-    "showNativeModMenu": false,
+    "locale": "en-GB",
+    "showNativeModMenu": true,
     "zoomPercent": 100,
     "usernameMode": "auto",
     "messageNameFallback": "Flameborn"
@@ -34,6 +34,13 @@
       "projectId": "shroudforge",
       "loader": "shroudforge"
     }
+  },
+  "hotkeys": {
+    "protectedKeys": [
+      { "scancode": 41, "label": "Escape", "action": "cancel" },
+      { "scancode": 58, "label": "F1", "action": "confirm" },
+      { "scancode": 69, "label": "F12", "action": "confirm" }
+    ]
   },
   "control": {
     "actions": {
@@ -231,8 +238,8 @@
       "levelFilter": "ALL",
       "autoScroll": true,
       "toggleKey": "SDL:67",
-      "refreshMilliseconds": 500,
-      "tailBytes": 1048576,
+      "refreshMilliseconds": 1000,
+      "tailBytes": 65536,
       "window": {
         "position": null
       }
@@ -240,13 +247,13 @@
     "worldEditor": {
       "enabled": true,
       "toggleKey": "SDL:59",
-      "refreshMilliseconds": 400
+      "refreshMilliseconds": 1000
     },
     "modloaderUi": {
       "enabled": true,
       "startPage": "news",
       "toggleKey": "SDL:66",
-      "refreshMilliseconds": 1000,
+      "refreshMilliseconds": 2000,
       "window": {
         "position": null
       }

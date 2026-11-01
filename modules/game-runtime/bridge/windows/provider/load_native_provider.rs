@@ -160,6 +160,10 @@ pub(in crate::windows) fn provider() -> Option<&'static Provider> {
                             "KfcRuntimeWorldCursorReadInput",
                             WorldCursorReadInput
                         ),
+                        world_cursor_input_detail: optional_symbol!(
+                            "KfcRuntimeWorldCursorInputDetail",
+                            WorldCursorInputDetail
+                        ),
                         world_voxel_read_for_session: optional_symbol!(
                             "KfcRuntimeWorldVoxelReadForSession",
                             WorldVoxelReadForSession
@@ -199,6 +203,11 @@ pub(in crate::windows) fn provider() -> Option<&'static Provider> {
                             "KfcRuntimeStatus",
                             unsafe extern "C" fn(*mut c_char, usize)
                         ),
+                        selected_character_name: optional_symbol!(
+                            "KfcRuntimeSelectedCharacterName",
+                            Registry
+                        ),
+                        main_menu_state: optional_symbol!("KfcRuntimeMainMenuState", MainMenuState),
                     })
                 }
             }

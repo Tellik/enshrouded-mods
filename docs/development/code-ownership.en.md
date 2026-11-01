@@ -22,7 +22,7 @@ modules/                       # Product modules and application entrypoints
   entrypoints/                # Loader application and Windows DLL entrypoints
   modloader/                  # Find, read, check and configure mods
     ui/                       # Modloader window and its views
-  player-name/                # Read the selected character name from the live Enshrouded UI
+  player-name/                # Resolve the Modloader name from the published native runtime cache
   updater/                    # Check, download and install updates
     ui/                       # Its update views
   loader-config/              # Read and save loader settings and state
@@ -85,7 +85,7 @@ The KFC parser is directly mounted at **kfc-parser/**. Cargo consumers use its l
 
 ## What happens when a mod loads?
 
-Installed mods are unpacked folders. A download archive is extracted by the installer. Its **mod.json** tells the loader its name, version, dependencies, and declared permissions. An optional **extended.mod.json** holds ShroudForge settings and extra details.
+Installed mods are unpacked folders. A download archive is extracted by the installer. Its **mod.json** tells the loader its name, version, dependencies, and declared permissions. An optional **extended.mod.json** holds ShroudForge settings and extra details. Optional **locales/<locale>.json** files translate mod-authored text for the selected Modloader language.
 
 ~~~mermaid
 flowchart TD
@@ -115,6 +115,8 @@ Native DLL handles are process-owned. `modules/modloader/dll_manager.rs` detects
 - **mod.json** follows the EML format. It contains the mod's identity, version, dependencies, and permissions.
 - **extended.mod.json** is an optional ShroudForge file. It contains the enabled state, setting values, groups, actions, links, short update notes, and optional `launcher` provenance (`EML` or `SF`).
 
+Locale catalogs live at **locales/<locale>.json** inside the same mod folder. `read_mod_locale_catalogs.rs` validates them with `manifest/mod-locale.schema.json`. `resolve_mod_locale.rs` applies them to the Modloader manifest and resolves Lua strings. Lua reads the selected Modloader code through `shroudforge.locale()`.
+
 The UI treats a package without **extended.mod.json** as EML; ShroudForge mods always include the extension. If ShroudForge adds an extension to an EML package, it writes `launcher: "EML"` so the package keeps its original identity. When an extension exists, only that explicit marker is shown as EML; a missing or non-EML marker is shown as SF. The loader checks the extension against its schema before accepting the package.
 
 Player changes are saved into the package's **extended.mod.json**. Updating the package can replace those choices. Setting migration is not supported. See the [mod package guide](../modding/create-mod-package.en.md) for examples and the exact schemas.
@@ -130,7 +132,10 @@ The [API reference](https://bonsaibauer.github.io/shroudforge/en/#api) is genera
 Shortcuts use SDL3 scancodes and mouse button numbers in one setting string,
 such as `Ctrl+SDL:29|Mouse:4`. The shortcut editor has separate keyboard and mouse
 columns. Each device has at most one chord, with the keyboard first in storage.
-`modules/hotkeys/` owns parsing, SDL key names, observation and key capture.
+`modules/hotkeys/` owns parsing, SDL key names, observation, key capture and
+the shared 250 ms debounce gate for configured native UI window toggles. The
+Modloader, Debug Console and World Editor use the gate independently. Lua mod
+keybind queries continue to use raw press revisions.
 Its official SDL3 source submodule is `modules/hotkeys/SDL`, pinned to
 `release-3.4.18`. Cargo builds SDL statically through `modules/hotkeys/build.rs`
 and compiles `sdl_keyboard.c` against the upstream event types. The existing
@@ -141,9 +146,12 @@ Enshrouded's process. Dedicated servers do not start keyboard observation.
 `control: "keybind"` settings remain in each mod's `extended.mod.json`, while
 native window shortcuts remain in the existing loader configuration. The
 Modloader owns declared-binding discovery and conflict validation. Lua mods
-use `shroudforge.input.is_keybind_down(settingKey)` and
-`shroudforge.input.keybind_label(settingKey)`. Numeric Windows keys, browser-code
-strings and the former raw `is_key_down` API are not supported.
+use `shroudforge.input.is_keybind_down(settingKey)`,
+`shroudforge.input.was_keybind_pressed(settingKey)` and
+`shroudforge.input.keybind_label(settingKey)`. The former
+`is_key_down("F1")` through `is_key_down("F8")` API was removed in 1.7.6.
+Calling it logs a migration error directing mod authors to declare a `keybind`
+setting and assign it in Compatibility → Hotkeys.
 
 ## Offline help and UI events
 
@@ -160,8 +168,8 @@ A file contains the implementation of the action named by that file. Related hel
 | What you want to change | Open this file |
 | --- | --- |
 | Find installed mods | `modules/modloader/find_installed_mods.rs` |
-| Read the live player name from the Enshrouded login log or character menu memory, and persist successful detections | `modules/player-name/lib.rs`, `modules/player-name/read_game_login_player_name.rs`, `modules/player-name/read_live_character_selection.rs` |
-| Read a mod's information | `modules/modloader/read_mod_manifest.rs` |
+| Provide the selected character name to Lua and the Modloader | `modules/game-runtime/native/main-menu/resolve_character_selection.cpp` derives the original selected-entry/name contract from the existing menu builder. `manage_native_main_menu.cpp` observes changes during its existing UI callback and owns copied name bytes. The optional ABI, Rust bridge and `runtime.player.name()` read that cache. The existing runtime status publication carries the same value to `modules/player-name/lib.rs`, which applies the Modloader manual/default-name policy without process access or a reader thread. |
+| Read a mod's information and locale catalogs | `modules/modloader/read_mod_manifest.rs`, `modules/modloader/read_mod_locale_catalogs.rs`, `modules/modloader/resolve_mod_locale.rs` |
 | Save mod settings | `modules/modloader/save_mod_settings.rs` |
 | Parse SDL scancode shortcuts, observe keyboard input, or edit the shared shortcut field | `modules/hotkeys/` |
 | Check declared module and mod shortcut conflicts | `modules/modloader/check_hotkey_conflicts.rs` |

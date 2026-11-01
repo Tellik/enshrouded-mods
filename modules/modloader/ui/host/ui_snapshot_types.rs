@@ -71,6 +71,7 @@ pub(crate) struct Snapshot {
     pub(crate) game_version: String,
     pub(crate) version: String,
     pub(crate) mods: Vec<ModInfo>,
+    pub(crate) hotkey_conflicts: Vec<shroudforge_package::HotkeyConflict>,
     pub(crate) activity: Vec<Activity>,
     pub(crate) notices: Vec<shroudforge_news::Notice>,
     pub(crate) news_templates: serde_json::Value,
@@ -89,6 +90,7 @@ pub(crate) struct Snapshot {
 pub(crate) struct SnapshotSettings {
     pub(crate) config_revision: String,
     pub(crate) module_preferences: serde_json::Value,
+    pub(crate) protected_hotkeys: Vec<shroudforge_package::ProtectedHotkey>,
     pub(crate) compact_mode: bool,
     pub(crate) reduced_motion: bool,
     pub(crate) show_native_mod_menu: bool,

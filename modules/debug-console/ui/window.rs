@@ -92,8 +92,14 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
         "debugConsole",
         shown,
     );
-    let mut key_down = false;
     let mut previous_toggle_key = config.toggle_key.clone();
+    let initial_toggle_press_revision = shroudforge_hotkeys::parse_hotkey(&config.toggle_key)
+        .ok()
+        .flatten()
+        .as_ref()
+        .map_or(0, shroudforge_hotkeys::hotkey_press_revision);
+    let mut toggle_debouncer =
+        shroudforge_hotkeys::WindowToggleDebouncer::new(initial_toggle_press_revision);
     let mut fatal_seen = false;
     let mut failure_review = false;
     let mut game_exited = false;
@@ -106,9 +112,11 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut bootstrap_popup_shown = false;
     let log_path = shroudforge_loader_config::paths::current_log(&arguments.root);
     let mut user_enabled = preferences["enabled"] != false;
+    let mut next_alert_scan = Instant::now();
     let mut next_activation_poll = Instant::now();
     let mut next_visibility_poll = Instant::now();
     let mut next_refresh = Instant::now();
+    let mut was_refresh_window_visible = window.is_visible() && !window.is_minimized();
     let mut last_config_error: Option<String> = None;
     let mut pending_window_geometry_save: Option<Instant> = None;
     event_loop.run(move |event, _, control_flow| {
@@ -160,6 +168,11 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
                         shroudforge_loader_config::config::read_loader(&arguments.root)
                     {
                         let debug_settings = &settings["modules"]["debugConsole"];
+                        if let Some(toggle_key) = debug_settings["toggleKey"].as_str()
+                            && config.toggle_key != toggle_key
+                        {
+                            config.toggle_key = toggle_key.to_owned();
+                        }
                         let enabled = debug_settings["enabled"] != false;
                         for key in ["popupMode", "popupCooldownSeconds"] {
                             if let Some(value) = debug_settings.get(key) {
@@ -183,30 +196,33 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
-                    next_activation_poll = Instant::now() + Duration::from_millis(250);
+                    next_activation_poll = Instant::now() + Duration::from_secs(1);
                 }
                 let popup_mode = if user_enabled && arguments.startup_watch {
                     preferences["popupMode"].as_str().unwrap_or("bootstrap")
                 } else {
                     "off"
                 };
-                if scan_log_for_alert(
-                    &log_path,
-                    &mut log_offset,
-                    popup_mode,
-                    &mut bootstrap_complete,
-                    &mut bootstrap_popup_shown,
-                ) && user_enabled
-                {
-                    fatal_seen = true;
-                    failure_review = true;
-                    open_for_alert(
-                        &window,
-                        &arguments.root,
-                        &mut shown,
-                        &mut auto_open_alert,
-                        auto_open_suppressed_until,
-                    );
+                if Instant::now() >= next_alert_scan {
+                    next_alert_scan = Instant::now() + Duration::from_millis(500);
+                    if scan_log_for_alert(
+                        &log_path,
+                        &mut log_offset,
+                        popup_mode,
+                        &mut bootstrap_complete,
+                        &mut bootstrap_popup_shown,
+                    ) && user_enabled
+                    {
+                        fatal_seen = true;
+                        failure_review = true;
+                        open_for_alert(
+                            &window,
+                            &arguments.root,
+                            &mut shown,
+                            &mut auto_open_alert,
+                            auto_open_suppressed_until,
+                        );
+                    }
                 }
                 if !game_exited && !arguments.game_process.is_null()
                     && unsafe { WaitForSingleObject(arguments.game_process, 0) } == WAIT_OBJECT_0
@@ -311,19 +327,22 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
                     window.set_always_on_top(next_topmost);
                     window_topmost = next_topmost;
                 }
-                let down = shroudforge_hotkeys::parse_hotkey(&config.toggle_key)
-                    .ok().flatten()
-                    .is_some_and(|binding| shroudforge_hotkeys::is_hotkey_down(&binding));
+                let binding = shroudforge_hotkeys::parse_hotkey(&config.toggle_key)
+                    .ok()
+                    .flatten();
+                let press_revision = binding
+                    .as_ref()
+                    .map_or(0, shroudforge_hotkeys::hotkey_press_revision);
                 if config.toggle_key != previous_toggle_key {
-                    key_down = down;
+                    toggle_debouncer.reset(press_revision);
                     previous_toggle_key = config.toggle_key.clone();
                 }
-                if !arguments.desktop
-                    && user_enabled
-                    && (game_focused || console_focused)
-                    && down
-                    && !key_down
-                    && !shroudforge_hotkeys::is_capture_active() {
+                if toggle_debouncer.should_toggle(press_revision, || {
+                    !arguments.desktop
+                        && user_enabled
+                        && (game_focused || console_focused)
+                        && !shroudforge_hotkeys::is_capture_active()
+                }) {
                     shown = !shown;
                     if !shown {
                         auto_open_suppressed_until = suppress_reopen_until(&preferences);
@@ -337,7 +356,6 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
                         window.set_focus();
                     }
                 }
-                key_down = down;
                 if !user_enabled && shown {
                     shown = false;
                     window.set_visible(false);
@@ -353,7 +371,12 @@ pub(crate) fn run() -> Result<(), Box<dyn std::error::Error>> {
                 } else if shown && (game_focused || console_focused) && !window.is_visible() {
                     window.set_visible(true);
                 }
-                if Instant::now() >= next_refresh {
+                let refresh_window_visible = window.is_visible() && !window.is_minimized();
+                if refresh_window_visible && !was_refresh_window_visible {
+                    next_refresh = Instant::now();
+                }
+                was_refresh_window_visible = refresh_window_visible;
+                if refresh_window_visible && Instant::now() >= next_refresh {
                     let Some(minimum_level) = refresh_console_settings(&arguments, &window, &mut preferences, &mut effective_window_geometry, &mut config, &mut user_enabled, &mut last_config_error, control_flow) else { return; };
                     next_refresh =
                         Instant::now() + Duration::from_millis(config.refresh_milliseconds);

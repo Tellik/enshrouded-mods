@@ -249,11 +249,13 @@ export function ModulePreferencesEditor({
                   <SettingsRow
                     key={key}
                     label={t(label)}
+                    rowClass={key === 'toggleKey' ? 'keybind-setting-row' : ''}
                     control={
                       key === 'toggleKey' ? (
                         <KeybindInput
                           label={t(label)}
                           value={prefs[module]?.[key]}
+                          assessmentTarget={{ scope: 'module', module }}
                           onChange={(value) => change(module, key, value)}
                           onReset={() => saveModule(module, key, null)}
                         />

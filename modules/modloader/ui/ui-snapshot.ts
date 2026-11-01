@@ -41,9 +41,17 @@ export type Snapshot = {
   gameVersion: string
   version: string
   mods: ModInfo[]
+  hotkeyConflicts: Array<{
+    firstId: string
+    secondId: string
+    binding: string
+  }>
   activity: Activity[]
   notices: Notice[]
-  newsTemplates?: Record<string, { title: string; message: string }>
+  newsTemplates?: Record<
+    string,
+    { title: string; message: string; beta?: boolean; englishOnly?: boolean }
+  >
   readNoticeIds: string[]
   release: Release
   releaseAnnouncement?: {
@@ -138,6 +146,7 @@ export const empty: Snapshot = {
   gameVersion: '',
   version: '1.0.0',
   mods: [],
+  hotkeyConflicts: [],
   activity: [],
   notices: [],
   readNoticeIds: [],
@@ -162,7 +171,7 @@ export const empty: Snapshot = {
   settings: {
     compactMode: false,
     reducedMotion: false,
-    showNativeModMenu: false,
+    showNativeModMenu: true,
     zoomPercent: 100,
     usernameMode: 'auto',
     detectedUsername: null,

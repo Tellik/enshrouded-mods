@@ -13,6 +13,7 @@ import modSupportFeedbackEn from './assets/mod-support-feedback.en.svg'
 import modSupportFeedbackEs from './assets/mod-support-feedback.es.svg'
 import modSupportFeedbackFr from './assets/mod-support-feedback.fr.svg'
 import multiplayerSupportBanner from './assets/multiplayer-support.svg'
+import creativeModeBanner from './assets/creative-mode-banner.png'
 import nexusModsBanner from '../../../assets/nexusmods-enshrouded-banner.jpg'
 
 const modSupportFeedbackBanners: Record<string, string> = {
@@ -66,14 +67,18 @@ export function NoticeCard({
   unread = false,
   onRead,
   onAction,
+  onWikiArticle,
 }: {
   item: NewsItem
   compact?: boolean
   unread?: boolean
   onRead?(): void
   onAction?(action: NoticeAction): void
+  onWikiArticle?(articleId: string): void
 }) {
   const { t, locale } = useI18n()
+  const cardT = (key: TranslationKey) =>
+    t(key, {}, item.englishOnly ? 'en-GB' : undefined)
   const actions = item.actions || []
   const links = item.links || []
   const supportLink =
@@ -83,18 +88,16 @@ export function NoticeCard({
   const modSupportLink = links.find(
     (link) => link.labelKey === 'news.link.modCompatibility',
   )
+  const creativeModeDownloadLink =
+    item.kind === 'notice.creativeMode'
+      ? links.find((link) => link.labelKey === 'news.link.creativeModeDownload')
+      : undefined
   const footerLinks =
     !compact && supportLink
       ? links.filter((link) => link !== supportLink)
       : links
-  const title =
-    item.kind === 'notice.localization'
-      ? t('news.notice.localization.title')
-      : item.title
-  const message =
-    item.kind === 'notice.localization'
-      ? t('news.notice.localization.message')
-      : item.message
+  const title = item.title
+  const message = item.message
   const tone =
     item.level === 'warn'
       ? 'warning'
@@ -118,6 +121,7 @@ export function NoticeCard({
         <div className="notice-title">
           <h3>{title}</h3>
           <span className="state-pill neutral">{item.level.toUpperCase()}</span>
+          {item.beta && <span className="state-pill neutral">BETA</span>}
           <EcosystemBadge ecosystem={item.ecosystem} />
           {unread && <i />}
         </div>
@@ -133,11 +137,27 @@ export function NoticeCard({
             <img src={item.banner.imageUrl} alt="" loading="lazy" />
           </button>
         )}
+        {!compact &&
+          item.kind === 'notice.creativeMode' &&
+          creativeModeDownloadLink?.url && (
+            <button
+              className="notice-banner"
+              type="button"
+              aria-label={cardT('news.link.creativeModeDownload')}
+              onClick={() =>
+                postRequest('open-url', {
+                  url: localizedUrl(creativeModeDownloadLink.url!),
+                })
+              }
+            >
+              <img src={creativeModeBanner} alt="" loading="lazy" />
+            </button>
+          )}
         {!compact && item.kind === 'notice.multiplayerSupport' && (
           <img
             className="notice-artwork"
             src={multiplayerSupportBanner}
-            alt={t('news.notice.multiplayerSupport.bannerAlt')}
+            alt={cardT('news.notice.multiplayerSupport.bannerAlt')}
             loading="lazy"
           />
         )}
@@ -145,7 +165,7 @@ export function NoticeCard({
           <button
             className="notice-banner"
             type="button"
-            aria-label={t('news.notice.nexusMods.open')}
+            aria-label={cardT('news.notice.nexusMods.open')}
             onClick={() =>
               postRequest('open-url', { url: localizedUrl(item.actionUrl!) })
             }
@@ -153,13 +173,13 @@ export function NoticeCard({
             <img src={nexusModsBanner} alt="" loading="lazy" />
           </button>
         )}
-        {!compact && modSupportLink && (
+        {!compact && modSupportLink?.url && (
           <button
             className="notice-banner"
             type="button"
-            aria-label={t('news.link.modCompatibility')}
+            aria-label={cardT('news.link.modCompatibility')}
             onClick={() =>
-              postRequest('open-url', { url: localizedUrl(modSupportLink.url) })
+              postRequest('open-url', { url: localizedUrl(modSupportLink.url!) })
             }
           >
             <img
@@ -177,9 +197,9 @@ export function NoticeCard({
           <button
             className="notice-banner"
             type="button"
-            aria-label={t('news.link.buyCoffee')}
+            aria-label={cardT('news.link.buyCoffee')}
             onClick={() =>
-              postRequest('open-url', { url: localizedUrl(supportLink.url) })
+              postRequest('open-url', { url: localizedUrl(supportLink.url!) })
             }
           >
             <img
@@ -220,28 +240,31 @@ export function NoticeCard({
                 }
               >
                 {item.actionLabelKey
-                  ? t(item.actionLabelKey as TranslationKey)
-                  : t('news.more')}
+                  ? cardT(item.actionLabelKey as TranslationKey)
+                  : cardT('news.more')}
               </button>
             )}
             {footerLinks.map((link, index) => (
               <button
                 key={`${link.labelKey || link.label}-${index}`}
-                onClick={() =>
-                  postRequest('open-url', { url: localizedUrl(link.url) })
-                }
+                onClick={() => {
+                  if (link.wikiArticleId)
+                    onWikiArticle?.(link.wikiArticleId)
+                  else if (link.url)
+                    postRequest('open-url', { url: localizedUrl(link.url) })
+                }}
               >
-                {link.label || t(link.labelKey as TranslationKey)}
+                {link.label || cardT(link.labelKey as TranslationKey)}
               </button>
             ))}
             {actions.map((action) => (
               <button key={action.id} onClick={() => onAction?.(action)}>
-                {t(`news.action.${action.kind}` as TranslationKey)}
+                {cardT(`news.action.${action.kind}` as TranslationKey)}
               </button>
             ))}
             {onRead && (
               <button onClick={onRead}>
-                {t(unread ? 'news.markRead' : 'news.markUnread')}
+                {cardT(unread ? 'news.markRead' : 'news.markUnread')}
               </button>
             )}
           </footer>

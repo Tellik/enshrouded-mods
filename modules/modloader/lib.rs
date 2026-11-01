@@ -6,7 +6,11 @@ mod mod_log_macros;
 use mod_log_macros as log;
 pub mod check_mod_conflicts;
 mod check_hotkey_conflicts;
-pub use check_hotkey_conflicts::validate_hotkey_configuration;
+pub use check_hotkey_conflicts::{
+    HotkeyAssessment, HotkeyAssessmentTarget, HotkeyConflict, ProtectedHotkey,
+    ProtectedHotkeyAction, assess_hotkey_change, find_hotkey_conflicts,
+    protected_hotkeys, validate_hotkey_configuration,
+};
 pub use validate_mod_settings::setting_is_enabled;
 pub mod dll_manager;
 pub mod mod_profiles;
@@ -25,6 +29,9 @@ mod mod_manifest_types;
 pub use mod_manifest_types::*;
 mod read_mod_manifest;
 pub use read_mod_manifest::*;
+pub(crate) mod read_mod_locale_catalogs;
+mod resolve_mod_locale;
+pub use resolve_mod_locale::*;
 mod parse_mod_manifest;
 pub use parse_mod_manifest::*;
 mod calculate_manifest_revision;

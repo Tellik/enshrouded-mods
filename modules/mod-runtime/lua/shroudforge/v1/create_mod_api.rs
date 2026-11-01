@@ -3,7 +3,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use mlua::{Function, Table, Value, Variadic};
 use mod_loader::Mod;
 use serde_json::json;
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+};
 
+use super::read_ui_locale::read_ui_locale;
 use super::set_mod_settings::set_settings;
 use crate::lua::LuaValue;
 
@@ -105,6 +113,21 @@ pub fn create(lua: &mlua::Lua, r#mod: &Mod) -> mlua::Result<Table> {
     table.raw_set("settings", settings)?;
 
     let input = lua.create_table()?;
+    let legacy_api_reported = Arc::new(AtomicBool::new(false));
+    let legacy_mod_id = mod_id.clone();
+    input.raw_set(
+        "is_key_down",
+        lua.create_function(move |_, _: Variadic<Value>| -> mlua::Result<bool> {
+            if !legacy_api_reported.swap(true, Ordering::Relaxed) {
+                tracing::error!(
+                    target: "shroudforge::mod",
+                    mod_id = %legacy_mod_id,
+                    "{LEGACY_KEY_DOWN_MIGRATION_MESSAGE}"
+                );
+            }
+            Err(mlua::Error::runtime(LEGACY_KEY_DOWN_MIGRATION_MESSAGE))
+        })?,
+    )?;
     let keybind_settings = r#mod.info().settings.clone();
     let keybind_id = mod_id.clone();
     let declared_keybinds = keybind_settings.clone();
@@ -117,6 +140,40 @@ pub fn create(lua: &mlua::Lua, r#mod: &Mod) -> mlua::Result<Table> {
                     && !shroudforge_hotkeys::is_capture_active()
                     && shroudforge_hotkeys::is_hotkey_down(&binding)
             }))
+        })?,
+    )?;
+    let keybind_id = mod_id.clone();
+    let press_keybind_settings = keybind_settings.clone();
+    let press_revisions = Arc::new(Mutex::new(HashMap::<String, (String, u64)>::new()));
+    input.raw_set(
+        "was_keybind_pressed",
+        lua.create_function(move |lua, key: String| {
+            let binding = read_keybind(lua, &keybind_id, &press_keybind_settings, &key)?;
+            let Some(binding) = binding else {
+                if let Ok(mut revisions) = press_revisions.lock() {
+                    revisions.remove(&key);
+                }
+                return Ok(false);
+            };
+            let signature = binding.normalized();
+            let revision = shroudforge_hotkeys::hotkey_press_revision(&binding);
+            let focused = is_game_focused() && !shroudforge_hotkeys::is_capture_active();
+            let Ok(mut revisions) = press_revisions.lock() else {
+                return Ok(false);
+            };
+            match revisions.get_mut(&key) {
+                Some((previous_signature, previous_revision))
+                    if *previous_signature == signature =>
+                {
+                    let pressed = focused && revision > *previous_revision;
+                    *previous_revision = revision;
+                    Ok(pressed)
+                }
+                _ => {
+                    revisions.insert(key, (signature, revision));
+                    Ok(false)
+                }
+            }
         })?,
     )?;
     let keybind_id = mod_id.clone();
@@ -145,6 +202,30 @@ pub fn create(lua: &mlua::Lua, r#mod: &Mod) -> mlua::Result<Table> {
         lua.create_function(|_, ()| request_modloader_toggle().map_err(mlua::Error::runtime))?,
     )?;
     table.raw_set("ui", ui)?;
+
+    // Reads the config file at each call: call it when settings change, not every update.
+    let locale_dir = game_dir.clone();
+    table.raw_set(
+        "locale",
+        lua.create_function(move |_, ()| Ok(read_ui_locale(&locale_dir)))?,
+    )?;
+
+    let locales = r#mod.info().locales.clone();
+    let i18n = lua.create_table()?;
+    i18n.raw_set(
+        "get",
+        lua.create_function(
+            move |_, (key, locale, fallback): (String, String, Option<String>)| {
+                Ok(mod_loader::localized_string(
+                    &locales,
+                    &key,
+                    &locale,
+                    fallback.as_deref(),
+                ))
+            },
+        )?,
+    )?;
+    table.raw_set("i18n", i18n)?;
 
     let notifications = lua.create_table()?;
     notifications.raw_set(
@@ -248,6 +329,14 @@ fn is_game_focused() -> bool {
         false
     }
 }
+
+const LEGACY_KEY_DOWN_MIGRATION_MESSAGE: &str = concat!(
+    "shroudforge.input.is_key_down was removed and is unsupported in ShroudForge 1.7.6. ",
+    "Declare a control: \"keybind\" setting in extended.mod.json, assign it in the ",
+    "Modloader Hotkey Manager under Compatibility > Hotkeys, and use ",
+    "shroudforge.input.was_keybind_pressed(settingKey) for presses or ",
+    "shroudforge.input.is_keybind_down(settingKey) while held."
+);
 
 #[cfg(windows)]
 fn request_modloader_toggle() -> Result<(), String> {

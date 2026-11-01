@@ -6,7 +6,7 @@ Cette page affiche et modifie les raccourcis des fenêtres ShroudForge ainsi que
 
 Cliquez sur le champ et appuyez sur la touche ou la combinaison souhaitée. La saisie utilise des codes physiques SDL3, par exemple `SDL:64` pour F7, `Ctrl+SDL:29` ou `Shift+SDL:100`. La position physique reste ainsi cohérente entre les dispositions de clavier. SDL fournit des libellés lisibles pour la disposition actuelle du système d’exploitation. Les modificateurs comme Ctrl, Alt, Shift et Meta doivent correspondre exactement.
 
-Pendant l’enregistrement, ShroudForge bloque ses raccourcis de fenêtre et les raccourcis de mods déclarés dans tous ses processus. Cette protection reste active même après une annulation ou un changement de fenêtre active, jusqu’à ce que toutes les touches et tous les boutons de souris soient relâchés, puis pendant trois secondes sans nouvel appui. Tout nouvel appui relance cette attente après le relâchement de la touche ou du bouton.
+Pendant l’enregistrement, ShroudForge bloque ses raccourcis de fenêtre et les raccourcis de mods déclarés dans tous ses processus. Cette protection reste active même après une annulation ou un changement de fenêtre active jusqu’à ce qu’aucune touche ni aucun bouton de souris ne soit maintenu. Un délai fixe de trois secondes commence ensuite, et les nouvelles pressions ne le relancent pas. Échap ne peut pas être enregistrée, seule ou avec des touches de modification : le jeu s’en sert pour son menu de pause et pour fermer ses fenêtres. L’appuyer annule l’enregistrement et garde le raccourci précédent. Une confirmation est requise pour toute nouvelle attribution de F1 ou F12, car Enshrouded ou Steam peut les utiliser. L’enregistrement est bloqué si le raccourci entre en conflit avec un autre raccourci ShroudForge actif.
 
 Utilisez **Effacer** pour désactiver un raccourci. Pour les fenêtres ShroudForge, vous pouvez restaurer la valeur par défaut intégrée. Les raccourcis d’un mod restent dans ses propres paramètres. Les champs des paramètres du mod et de **Compatibility → Hotkeys** modifient la même valeur enregistrée.
 
@@ -30,20 +30,16 @@ L’auteur du mod déclare le raccourci comme paramètre dans `extended.mod.json
 Le mod lit ce paramètre avec l’API Lua de ShroudForge. Il utilise ainsi la valeur actuelle au lieu d’imposer une touche dans le script :
 
 ```lua
-local was_down = false
-
 return {
     on_update = function()
-        local down = shroudforge.input.is_keybind_down("pasteKey")
-        if down and not was_down then
+        if shroudforge.input.was_keybind_pressed("pasteKey") then
             -- Exécuter l’action.
         end
-        was_down = down
     end,
 }
 ```
 
-`shroudforge.input.keybind_label("pasteKey")` renvoie le libellé lisible actuel de SDL pour la disposition du système d’exploitation. La lecture des touches fonctionne lorsqu’une fenêtre du jeu est active. La déclaration seule ne remplace pas une touche codée en dur dans le script. Le mod doit lire cette valeur avec l’API et l’utiliser pour son action. Les auteurs doivent déclencher l’action uniquement lors du passage de la touche relâchée à la touche enfoncée afin d’éviter de la répéter à chaque mise à jour.
+`shroudforge.input.was_keybind_pressed("pasteKey")` conserve les pressions brèves entre les mises à jour du runtime et renvoie `true` une fois par mod et paramètre. Les changements enregistrés en direct atteignent le runtime en une seconde au maximum. Utilisez `is_keybind_down` pour les actions qui doivent se répéter tant que la touche reste enfoncée. L’ancienne API `is_key_down("F1")` à `is_key_down("F8")` n’est plus prise en charge depuis ShroudForge 1.7.6. Son appel inscrit un message de migration dans le journal et déclenche une erreur Lua. Déclarez un paramètre `keybind` et attribuez-le dans le gestionnaire de raccourcis, sous **Compatibility → Hotkeys**. `shroudforge.input.keybind_label("pasteKey")` renvoie le libellé lisible actuel de SDL pour la disposition du système d’exploitation. La lecture des touches fonctionne lorsqu’une fenêtre du jeu est active. La déclaration seule ne remplace pas une touche codée en dur dans le script. Le mod doit lire cette valeur avec l’API et l’utiliser pour son action.
 
 ## Conflits et autres mods
 

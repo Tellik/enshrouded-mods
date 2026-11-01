@@ -1,0 +1,43 @@
+{
+  "$schema": "https://bonsaibauer.github.io/shroudforge/schemas/mod-locale.schema.json",
+  "mod": {
+    "name": "SF Unlimited Flight",
+    "description": "Justerar segelflygplanets uthållighet och flygkontroller."
+  },
+  "settings": {
+    "unlimitedFlying": {
+      "label": "Stig med segelflygaren",
+      "description": "Låter dig styra segelflygplanet uppåt. Segelflygets uthållighet förbrukas som vanligt."
+    },
+    "unlimitedGliderStamina": {
+      "label": "Obegränsad uthållighet för segelflyg",
+      "description": "Förhindrar att uthållighet förbrukas under glidflygning."
+    },
+    "turnSpeed": {
+      "label": "Svänghastighet",
+      "description": "Multiplikator för segelflygplanets svänghastighet."
+    },
+    "moveSpeed": {
+      "label": "Flythastighet",
+      "description": "Multiplikator för segelflygplanets acceleration framåt."
+    },
+    "liftSpeed": {
+      "label": "Lyfthastighet",
+      "description": "Multiplikator för segelflygplanets längsgående luftmotstånd. Högre värden ökar luftmotståndet."
+    },
+    "descendSpeed": {
+      "label": "Nedstigningshastighet",
+      "description": "Multiplikator för segelflygplanets vertikala luftmotstånd. Högre värden ökar luftmotståndet."
+    }
+  },
+  "groups": [
+    {
+      "label": "Obegränsat flyg",
+      "description": "Hastighetsändringar gäller det aktiva segelflygplanet och alla spelare som använder samma typ."
+    }
+  ],
+  "changelog": [
+    "Separerar uppåtflygning från obegränsad uthållighet för segelflyg. Spelets ursprungliga värden återställs när modden stängs av."
+  ],
+  "strings": {}
+}

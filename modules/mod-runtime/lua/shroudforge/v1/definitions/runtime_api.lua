@@ -8,6 +8,7 @@
 --- @field phase "pregame"|"ingame" Whether the game is preparing startup data or is running.
 --- @field is_client boolean True when this mod runs in a player client process.
 --- @field is_server boolean True when this mod runs in a Dedicated Server process.
+--- @field player RuntimePlayerApi Cached local character selection from the main menu.
 --- @field network RuntimeNetworkApi Steam Networking Messages P2P channel on the current client or dedicated-server process.
 --- @field services RuntimeServicesApi Reflected views of original named engine DI services with independently validated plain-data storage contracts.
 --- @field impact RuntimeImpactApi Checked semantic calls to original named Impact operations.
@@ -20,6 +21,26 @@
 --- @field on_unload fun()? Called when the runtime mod stops.
 --- @field update_interval_ms integer? Minimum 8, maximum 1000, default 50. Missed intervals are not replayed.
 runtime = {}
+
+--- Return the cached original client GameFlow state, using the same source as the Modloader UI.
+--- True means PreGame, including its selection/browser screens. False means a validated other state.
+--- Returns nil and a reason during transitions, before detection, or when the provider is unavailable.
+--- Reads only the existing native cache and does not require world access or an execution profile.
+--- Requires an active runtime mod with the runtime capability.
+--- @return boolean? main_menu
+--- @return string? reason
+function runtime.is_main_menu() end
+
+---@class RuntimePlayerApi
+runtime.player = {}
+--- Return the cached name selected in the local client's main menu, including Unicode.
+--- The native menu reads the name on the first selection and when selection/name metadata changes.
+--- This getter performs no game-memory scan or refresh. It does not require an active world.
+--- Returns nil and a reason before a name is available and on Dedicated Servers.
+--- Requires an active runtime mod with the runtime capability.
+---@return string? name
+---@return string? reason
+function runtime.player.name() end
 
 --- Reversible scalar changes through the common typed writers.
 --- Targets resolve original storage identities. Independent mods receive exclusive
@@ -50,12 +71,21 @@ function RuntimeWriteClaim:release() end
 ---@field read fun():table?,string? Returns the owned observed scalar plus dependent values.
 ---@field write fun(snapshot:table,value:unknown):boolean,unknown,string?,unknown Uses the guarded public writer and its confirmed result.
 ---@field normalize fun(snapshot:table,value:unknown):unknown?,string? Applies the original scalar encoding or attribute program.
+---@class RuntimeAttributeSnapshotContext
+---@field active boolean True only during one update. Set false before retaining a target for cleanup.
+---@field session integer? World session for the cached root.
+---@field entity integer? Entity owning the cached root.
+---@field root_hash integer? Root identity returned by the attribute catalog.
+---@field component_name string? Resolved component layout for the cached root.
+---@field snapshot table? Latest complete root snapshot or confirmed update result.
 ---Bind an original named attribute on one current entity. Full root values guard dependent inputs.
+---A shared snapshot context is limited to one update and one entity/root. The guarded writer checks the full snapshot before every mutation.
 ---@param entity integer
 ---@param selector string|integer Original attribute name or stored ID.
+---@param snapshot_context RuntimeAttributeSnapshotContext? Optional per-update context shared by attributes of the same entity and root.
 ---@return RuntimeOverrideTarget? target
 ---@return string? reason
-function runtime.overrides.attribute(entity, selector) end
+function runtime.overrides.attribute(entity, selector, snapshot_context) end
 ---Bind one inline scalar. The original component/root calculator remains authoritative.
 ---@param entity integer
 ---@param component TypeSelector
@@ -497,7 +527,7 @@ function runtime.ecs.read_attribute(entity, selector) end
 ---@return string? reason
 function runtime.ecs.write_attribute_storage(entity, selector, value) end
 
----Read the entire related attribute root as {root_hash, scalar_type, values={original_name=value}}.
+---Read the entire related attribute root as {entity, root_hash, component, scalar_type, values={original_name=value}}.
 ---@param entity integer
 ---@param selector string|integer Original attribute name or stored attribute ID.
 ---@return table? result

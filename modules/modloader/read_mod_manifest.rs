@@ -1,6 +1,6 @@
 #[cfg(test)]
 use crate::parse_manifest;
-use crate::{FileSystem, ModManifest};
+use crate::{FileSystem, ModManifest, validate_mod_locale_catalogs};
 use crate::{infer_api_contract, parse_manifest_with_extension};
 use serde_json::Value;
 #[cfg(test)]
@@ -26,6 +26,8 @@ pub fn read_manifest(root: &Path, fs: &mut FileSystem) -> Result<ModManifest, St
     let mut source = String::new();
     collect_lua_sources(fs, camino::Utf8Path::new("src"), &mut source)?;
     infer_api_contract(&mut manifest, &source);
+    manifest.locales = crate::read_mod_locale_catalogs::read_mod_locale_catalogs(root, fs)?;
+    validate_mod_locale_catalogs(&manifest)?;
     Ok(manifest)
 }
 
@@ -69,7 +71,11 @@ fn apply_manifest_profile(
         }
         merge_profile_object(mod_json, &overlay);
     }
-    if let Some(overlay) = profile.extended_mod_json {
+    if let Some(mut overlay) = profile.extended_mod_json {
+        // Mod activation is user-controlled, so adapters must never override it.
+        if let Some(fields) = overlay.as_object_mut() {
+            fields.remove("enabled");
+        }
         let extended = extended_mod_json.get_or_insert_with(|| {
             serde_json::json!({"schemaVersion": 1, "enabled": false})
         });

@@ -58,13 +58,15 @@ export function ModPage({
             ? 'unknown'
             : status?.state === 'failed'
               ? 'error'
-              : status?.state === 'waiting-world'
-                ? 'waiting'
-                : status?.state === 'not-running'
-                  ? 'notRunning'
-                  : !status || status?.state === 'unconfirmed'
-                    ? 'unknown'
-                    : 'running'
+              : status?.state === 'ready'
+                ? 'ready'
+                : status?.state === 'waiting-world'
+                  ? 'waiting'
+                  : status?.state === 'not-running'
+                    ? 'notRunning'
+                    : !status || status?.state === 'unconfirmed'
+                      ? 'unknown'
+                      : 'running'
   const stateLabel = t(
     disablePending
       ? 'mod.mode.disablePending'
@@ -196,6 +198,13 @@ export function ModPage({
                       key={definition.key}
                       definition={definition}
                       value={values[definition.key]}
+                      assessmentTarget={{
+                        scope: 'mod',
+                        modId: mod.id,
+                        key: definition.key,
+                        revision: mod.revision,
+                        values,
+                      }}
                       disabled={!settingIsEnabled(definition, settings, values)}
                       onChange={(value) => updateSetting(definition.key, value)}
                     />

@@ -89,10 +89,13 @@ local function fixture()
                 equal(name, "keen::ecs::PlayerInput")
                 return f.players
             end,
-            get_attribute=function(selector) return {name=selector} end,
+            get_attribute=function(selector) return {name=selector, root_hash=1} end,
             read_attributes=function(entity, selector)
                 equal(selector, "StaminaDepletionMod_Glider")
-                return {values=clone(f.attributes[entity]), component={qualified_name="keen::ecs::StaminaDepletionMod"}}
+                return {
+                    entity=entity, root_hash=1, values=clone(f.attributes[entity]),
+                    component={qualified_name="keen::ecs::StaminaDepletionMod"},
+                }
             end,
             evaluate_attributes=function(field, values)
                 equal(field, "StaminaDepletionMod_Glider")
@@ -103,7 +106,10 @@ local function fixture()
                 equal(f.attributes[entity][field], expected[field], "attribute compare")
                 f.attributes[entity][field] = value
                 f.writes = f.writes + 1
-                return {values=clone(f.attributes[entity])}
+                return {
+                    entity=entity, root_hash=1, values=clone(f.attributes[entity]),
+                    component={qualified_name="keen::ecs::StaminaDepletionMod"},
+                }
             end,
             read_fields=function(entity, type_name, paths)
                 if type_name == "keen::ecs::Actor" then
@@ -336,6 +342,7 @@ do
     f:tick()
     equal(f.writes, 0, "defaults do not modify original inputs")
     f.settings.unlimitedFlying = true
+    f.settings.unlimitedGliderStamina = true
     f.settings.turnSpeed = 200
     f.settings.moveSpeed = 150
     f.settings.liftSpeed = 200
@@ -397,6 +404,7 @@ do
     local f = fixture()
     f.players = {11}
     f.settings.unlimitedFlying = true
+    f.settings.unlimitedGliderStamina = true
     f.settings.turnSpeed = 200
     f.active_item = f.item_id
     f:tick()

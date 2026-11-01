@@ -71,11 +71,52 @@ pub fn is_hotkey_down(hotkey: &Hotkey) -> bool {
     }
 }
 
+/// Returns the most recent observed press revision for a configured shortcut.
+/// Callers keep their own previous revision so a short tap survives between polls.
+pub fn hotkey_press_revision(hotkey: &Hotkey) -> u64 {
+    #[cfg(windows)]
+    return windows::press_revision(hotkey);
+    #[cfg(not(windows))]
+    {
+        let _ = hotkey;
+        0
+    }
+}
+
 pub(crate) fn valid_scancode(scancode: u16) -> bool {
     #[cfg(windows)]
     return unsafe { windows::sf_keyboard_valid_scancode(i32::from(scancode)) != 0 };
     #[cfg(not(windows))]
     (1..512).contains(&scancode)
+}
+
+/// Convert a legacy Windows virtual-key setting to an SDL keyboard or mouse
+/// binding without initializing SDL input.
+pub fn legacy_virtual_key_binding(virtual_key: u16) -> Option<String> {
+    let mouse_button = match virtual_key {
+        0x01 => Some(1), // VK_LBUTTON
+        0x02 => Some(3), // VK_RBUTTON
+        0x04 => Some(2), // VK_MBUTTON
+        0x05 => Some(4), // VK_XBUTTON1
+        0x06 => Some(5), // VK_XBUTTON2
+        _ => None,
+    };
+    if let Some(button) = mouse_button {
+        return Some(format!("Mouse:{button}"));
+    }
+
+    #[cfg(windows)]
+    {
+        let scancode =
+            unsafe { windows::sf_keyboard_legacy_virtual_key_scancode(i32::from(virtual_key)) };
+        let scancode = u16::try_from(scancode).ok()?;
+        return (scancode != 0 && valid_scancode(scancode)).then(|| format!("SDL:{scancode}"));
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = virtual_key;
+        None
+    }
 }
 
 pub(crate) fn primary_modifier(scancode: u16) -> u8 {
@@ -162,6 +203,7 @@ mod windows {
         fn sf_keyboard_error() -> *const c_char;
         fn sf_keyboard_scancode_count() -> i32;
         pub(super) fn sf_keyboard_valid_scancode(scancode: i32) -> i32;
+        pub(super) fn sf_keyboard_legacy_virtual_key_scancode(virtual_key: i32) -> i32;
         pub(super) fn sf_keyboard_modifier(scancode: i32) -> i32;
         fn sf_keyboard_label(scancode: i32) -> *const c_char;
         fn sf_keyboard_sync_layout() -> i32;
@@ -207,10 +249,12 @@ mod windows {
             if !self.ending {
                 return;
             }
-            if !idle {
-                if self.release_after.take().is_some() {
-                    tracing::trace!(target: "shroudforge::hotkeys", "Shortcut capture protection is waiting for input release");
-                }
+            // Only the inputs held when the capture ends delay the protection.
+            // Once they are released, the next presses are new ones (moving
+            // in the game, the window shortcut): they must not restart the
+            // three seconds, or the shortcuts stay blocked while the player
+            // keeps playing.
+            if !idle && self.release_after.is_none() {
                 return;
             }
             let release_after = self.release_after.get_or_insert_with(|| {
@@ -235,6 +279,8 @@ mod windows {
     static ACTIVE: AtomicBool = AtomicBool::new(false);
     static MODIFIERS: AtomicU8 = AtomicU8::new(0);
     static KEYS: RwLock<BTreeMap<Trigger, KeyState>> = RwLock::new(BTreeMap::new());
+    static PRESS_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+    static PRESS_REVISIONS: RwLock<BTreeMap<(Trigger, u8), u64>> = RwLock::new(BTreeMap::new());
     pub(super) static LABELS: RwLock<Vec<String>> = RwLock::new(Vec::new());
     pub(super) static LAYOUT_REVISION: AtomicU64 = AtomicU64::new(0);
     pub(super) static CAPTURE: Mutex<Capture> = Mutex::new(Capture {
@@ -295,6 +341,9 @@ mod windows {
                         ACTIVE.store(false, Ordering::Release);
                         if let Ok(mut keys) = KEYS.write() {
                             keys.clear();
+                        }
+                        if let Ok(mut presses) = PRESS_REVISIONS.write() {
+                            presses.clear();
                         }
                         if let Ok(mut capture) = CAPTURE.lock() {
                             capture.armed = false;
@@ -496,6 +545,14 @@ mod windows {
                 if repeat {
                     return;
                 }
+                if down && !is_capture_active() {
+                    let revision = PRESS_SEQUENCE
+                        .fetch_add(1, Ordering::AcqRel)
+                        .wrapping_add(1);
+                    if let Ok(mut presses) = PRESS_REVISIONS.write() {
+                        presses.insert((trigger, modifiers), revision);
+                    }
+                }
                 if let Ok(mut capture) = CAPTURE.lock() {
                     capture.release_if_idle(idle);
                     if capture.armed && timestamp >= capture.armed_at && device == capture.device {
@@ -539,6 +596,24 @@ mod windows {
                         .get(&chord.trigger)
                         .is_some_and(|key| key.down && key.modifiers == chord.required_modifiers())
             })
+        })
+    }
+
+    pub(super) fn press_revision(hotkey: &Hotkey) -> u64 {
+        if !ACTIVE.load(Ordering::Acquire) {
+            return 0;
+        }
+        PRESS_REVISIONS.read().map_or(0, |presses| {
+            hotkey
+                .chords
+                .iter()
+                .filter_map(|chord| {
+                    presses
+                        .get(&(chord.trigger, chord.required_modifiers()))
+                        .copied()
+                })
+                .max()
+                .unwrap_or(0)
         })
     }
 
@@ -607,5 +682,40 @@ mod windows {
             CloseHandle(handle);
         }
         active
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        fn ending_capture() -> Capture {
+            Capture {
+                armed: false,
+                armed_at: 0,
+                device: InputDevice::Keyboard,
+                candidate: None,
+                pending: None,
+                guard: None,
+                ending: true,
+                release_after: None,
+            }
+        }
+
+        #[test]
+        fn protection_waits_for_the_held_inputs_then_ignores_new_presses() {
+            let mut capture = ending_capture();
+            capture.release_if_idle(false);
+            assert!(capture.ending && capture.release_after.is_none(), "the captured key is still held");
+
+            capture.release_if_idle(true);
+            let release_after = capture.release_after.expect("the delay starts at release");
+
+            capture.release_if_idle(false);
+            assert_eq!(capture.release_after, Some(release_after), "a new press keeps the delay");
+
+            capture.release_after = Some(Instant::now() - Duration::from_millis(1));
+            capture.release_if_idle(false);
+            assert!(!capture.ending, "the protection ends even while a new key is held");
+        }
     }
 }

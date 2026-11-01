@@ -6,7 +6,7 @@ Esta página muestra y permite cambiar los atajos de las ventanas de ShroudForge
 
 Haz clic en el campo y pulsa la tecla o combinación que quieras. La entrada usa códigos físicos de SDL3, como `SDL:64` para F7, `Ctrl+SDL:29` o `Shift+SDL:100`. Así se mantiene la misma posición física entre distribuciones de teclado. SDL proporciona etiquetas legibles para la distribución actual del sistema operativo. Los modificadores como Ctrl, Alt, Shift y Meta deben coincidir exactamente.
 
-Durante la grabación, ShroudForge bloquea los atajos de sus ventanas y los atajos declarados de los mods en todos sus procesos. El bloqueo también se mantiene después de cancelar o cambiar el foco de la ventana, hasta soltar todas las teclas y botones del ratón y dejar pasar tres segundos sin una nueva pulsación. Cada nueva pulsación reinicia la espera después de soltar la tecla o el botón.
+Durante la grabación, ShroudForge bloquea los atajos de sus ventanas y los atajos declarados de los mods en todos sus procesos. El bloqueo también se mantiene después de cancelar o cambiar el foco de la ventana hasta que no quede ninguna tecla ni botón del ratón pulsado. Después se inicia un plazo fijo de tres segundos que las nuevas pulsaciones no reinician. Escape no se puede grabar, ni sola ni con modificadores: el juego la usa para su menú de pausa y para cerrar sus ventanas. Pulsarla cancela la grabación y conserva el atajo anterior. Las nuevas asignaciones de F1 o F12 requieren confirmación porque Enshrouded o Steam pueden usarlas. Se bloquea el guardado si la asignación entra en conflicto con otro atajo activo de ShroudForge.
 
 Usa **Borrar** para desactivar un atajo. En las ventanas de ShroudForge puedes restaurar el valor predeterminado integrado. Los atajos de cada mod siguen en sus propios ajustes. Los campos de los ajustes del mod y de **Compatibility → Hotkeys** modifican el mismo valor guardado.
 
@@ -30,20 +30,16 @@ El autor del mod declara el atajo como un ajuste en `extended.mod.json`:
 El mod lee este ajuste mediante la API Lua de ShroudForge. Así responde al valor actual en lugar de fijar una tecla en el script:
 
 ```lua
-local was_down = false
-
 return {
     on_update = function()
-        local down = shroudforge.input.is_keybind_down("pasteKey")
-        if down and not was_down then
+        if shroudforge.input.was_keybind_pressed("pasteKey") then
             -- Ejecutar la acción.
         end
-        was_down = down
     end,
 }
 ```
 
-`shroudforge.input.keybind_label("pasteKey")` devuelve la etiqueta legible actual de SDL para la distribución del sistema operativo. La consulta de teclas funciona cuando una ventana del juego está activa. La declaración por sí sola no cambia una tecla fijada en el script. El mod debe leer este valor mediante la API y usarlo para su acción. Los autores deben ejecutar la acción solo al pasar de tecla suelta a pulsada para evitar repetirla en cada actualización mientras se mantiene pulsada.
+`shroudforge.input.was_keybind_pressed("pasteKey")` conserva las pulsaciones breves entre actualizaciones del runtime y devuelve `true` una vez por mod y ajuste. Los cambios guardados en vivo llegan al runtime en un segundo como máximo. Usa `is_keybind_down` para acciones que deban repetirse mientras se mantenga pulsada la tecla. La API anterior `is_key_down("F1")` a `is_key_down("F8")` dejó de estar admitida en ShroudForge 1.7.6. Su llamada registra un mensaje de migración y genera un error de Lua. Declara un ajuste `keybind` y asígnalo en el administrador de atajos, en **Compatibility → Hotkeys**. `shroudforge.input.keybind_label("pasteKey")` devuelve la etiqueta legible actual de SDL para la distribución del sistema operativo. La consulta de teclas funciona cuando una ventana del juego está activa. La declaración por sí sola no cambia una tecla fijada en el script. El mod debe leer este valor mediante la API y usarlo para su acción.
 
 ## Conflictos y otros mods
 
