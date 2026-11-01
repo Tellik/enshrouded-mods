@@ -6,14 +6,21 @@ reachable without buying a path through the tree. No other skill is changed.
 
 The mod uses ShroudForge's pregame asset patch. The same folder targets client
 and dedicated server. It was checked against Enshrouded client build
-**26082781**, dedicated-server build **26083076**, and ShroudForge **1.7.6**.
+**26082781**, dedicated-server build **26083076**, and a locally patched
+ShroudForge **1.7.7 dev (40603042431)**. On Linux/Proton, stock ShroudForge
+1.7.6 and 1.7.7 dev report `Access denied (os error 5)` when committing the
+changed asset, leaving the skill at 3 points. The patched loader closes its
+game asset reader before committing. Native Windows gameplay remains untested.
 On a different game build, the patch refuses to change the tree if the expected
 node or its original cost has changed.
 
 ## Install
 
 1. Close the client or stop the dedicated server using its normal controls.
-2. Install ShroudForge 1.7.6 if it is not already installed.
+2. On Linux/Proton, install the patched ShroudForge 1.7.7 dev package from this
+   project's `releases` folder. Preserve your existing mod settings when
+   updating. On native Windows, the stock 1.7.7 dev loader has not been tested
+   with this mod.
 3. Copy the `airborne-architect-free` folder into that installation's `mods`
    folder. The script must be at
    `mods/airborne-architect-free/src/mod.lua`.
@@ -58,4 +65,5 @@ Camera Nexus page](https://www.nexusmods.com/enshrouded/mods/177); it does not
 include any files or assets from that mod.
 
 Version 0.1.1 fixes startup failure on ShroudForge's userdata-backed game
-arrays. Version 0.1.0 did not apply the patch.
+arrays. Version 0.1.0 did not apply the patch. The loader commit fix is separate
+from the mod and must be present for the patch to persist under Proton.
