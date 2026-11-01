@@ -40,6 +40,36 @@ dedicated-server installation logged `Committed 1 changed resources`, and the
 server owner confirmed that the skill worked there too. Hosted co-op needs a
 separate host-and-guest check.
 
+### Client steps
+
+1. Close Enshrouded. In Steam, choose **Manage → Browse local files** and find
+   the folder containing `enshrouded.exe`.
+2. Extract the patched ShroudForge ZIP into that folder, with its proxy DLLs,
+   `shroudforge/`, and `mods/` beside `enshrouded.exe`. On Linux/Proton, set
+   Steam Launch Options to
+   `WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%`.
+3. Extract `airborne-architect-free-0.2.0.zip` inside `mods/`. Check
+   `mods/airborne-architect-free/mod.json` and
+   `mods/airborne-architect-free/src/mod.lua`. The packaged configuration
+   starts enabled. Start the game and perform the [check](#check) below.
+
+### Dedicated-server steps
+
+1. Stop the server through its control panel and back up its world. Find its
+   folder containing `enshrouded_server.exe`.
+2. Extract the patched ShroudForge ZIP there, then extract the mod ZIP inside
+   `mods/`. For a Wine/Proton server, set the game-process environment to
+   `WINEDLLOVERRIDES=dbghelp=native,builtin;winmm=native,builtin`.
+3. The packaged mod starts enabled. Start the server when you choose and check
+   its ShroudForge log for the committed asset. Install the same mod and loader
+   on clients that should see the zero-point price and Root link.
+
+For detailed ShroudForge installation and a WebView2 fix or bypass on Proton,
+see the [shared guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md).
+For updates, preserve the installed `extended.mod.json`: directly extracting
+the ZIP over this mod can reset an enabled state or settings you changed. The
+shared guide provides a configuration-preserving installer and manual steps.
+
 ## Check
 
 In the ShroudForge log, find `Free Airborne Architect: cost 0; free Root link
