@@ -1,7 +1,8 @@
 # Enshrouded Mods
 
 This is the landing page for Enshrouded mod projects. Choose a branch for that
-project's source and instructions. [Releases](https://github.com/Tellik/enshrouded-mods/releases)
+project's source and instructions. The [shared installation guide](docs/install-mods.md)
+covers client and dedicated-server setup. [Releases](https://github.com/Tellik/enshrouded-mods/releases)
 are shared across the repository; download the ZIP asset named for the mod,
 not GitHub's automatically generated source archive.
 
@@ -9,13 +10,14 @@ not GitHub's automatically generated source archive.
 | --- | --- | --- |
 | [`autorun`](https://github.com/Tellik/enshrouded-mods/tree/autorun) | Client-side Autorun mod with configurable hotkey | [Installation guide](https://github.com/Tellik/enshrouded-mods/blob/autorun/README.md) · [v0.3.0 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.0) (`autorun-0.3.0.zip`) |
 | [`wand-durability`](https://github.com/Tellik/enshrouded-mods/tree/wand-durability) | Experimental: one normal durability cost per primary wand attack, including Multishot bonus projectiles | [Client and server installation guide](https://github.com/Tellik/enshrouded-mods/blob/wand-durability/mods/wand-durability/README.md) · [v0.2.0 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.0) (`wand-durability-0.2.0.zip`) |
+| [`airborne-architect-free`](https://github.com/Tellik/enshrouded-mods/tree/airborne-architect-free) | Airborne Architect costs zero points and is reachable from a free Root node | [Mod details](https://github.com/Tellik/enshrouded-mods/blob/airborne-architect-free/mods/airborne-architect-free/README.md) · [v0.2.0](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0) (`airborne-architect-free-0.2.0.zip`) |
+| [`shroudforge-asset-commit-fix`](https://github.com/Tellik/enshrouded-mods/tree/shroudforge-asset-commit-fix) | ShroudForge 1.7.7 development source with the Windows/Wine asset-commit fix | [Patch and loader package](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0) |
 | [`1.7.6`](https://github.com/Tellik/enshrouded-mods/tree/1.7.6) | Unmodified ShroudForge 1.7.6 source snapshot | [ShroudForge README](https://github.com/Tellik/enshrouded-mods/blob/1.7.6/README.md) |
 
 Autorun requires the **unmodified** [ShroudForge 1.7.6 dev release](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919),
 downloaded from the upstream release. The `1.7.6` branch is a source reference;
 it is not a separate runtime package. Autorun's current package supports
-Enshrouded Steam build `26082781`. The Autorun branch has separate Windows and
-Linux/Proton installation steps; gameplay has been tested on Linux/Proton in
+Enshrouded Steam build `26082781`. Gameplay has been tested on Linux/Proton in
 single-player and as a dedicated-server client. Native Windows gameplay
 remains untested.
 
@@ -29,6 +31,15 @@ Two players verified one durability lost per Cryptic Wand built-in Multishot
 attack on a Wine dedicated server, including one without the client mod. An
 earlier 0.1.0 single-player Proton test also passed. Other wands, the
 Multishot skill, hosted co-op, and lifecycle behavior remain unverified.
+
+Free Airborne Architect requires the patched ShroudForge 1.7.7 development
+package linked from its release. Install the mod and loader on a dedicated
+server for zero-point unlocks there, and on each client that should see the
+zero-point price and Root link. A client-only copy works in single-player, but
+only changes the displayed price on an unmodded dedicated server; the skill
+stays locked. Single-player and a private dedicated-server
+unlock/refund/reunlock test passed on Linux/Proton and Wine. Native Windows
+gameplay and reconnect persistence remain unverified.
 
 The `main` branch contains this landing page, the [MIT license](LICENSE), and
 the entry point for Autorun's manually triggered Windows package workflow.
