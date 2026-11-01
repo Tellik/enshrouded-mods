@@ -1,140 +1,48 @@
-# Enshrouded Autorun
+# Autorun v0.3.0 installation guide
 
-This is the `autorun` branch of [Enshrouded Mods](https://github.com/Tellik/enshrouded-mods). The default branch lists the available mods.
-
-Autorun is a standalone, client-side mod for Enshrouded. Press **F8** to move
-forward at the game's normal speed, press **F8** again to stop, or press your
-backward key (**S** by default) to cancel. The toggle key is configurable.
-Autorun uses [ShroudForge](https://github.com/bonsaibauer/shroudforge) to load
-its own plugin; it does not replace or require a modified ShroudForge runtime.
-
-This release supports **Enshrouded Steam build 26082781** with the unmodified
-**ShroudForge 1.7.6 dev build 40026840919**. The mod checks the exact game
-executable and stays inactive on a different build. Single-player and joining
-a dedicated server were tested on Linux with Proton Experimental, with Autorun
-installed only on the client. Another player was online during a dedicated-server
-test, although their view of the movement was not checked. The Windows DLL
-builds successfully, but native Windows gameplay has not been tested. Menus
-and disconnects also need further testing.
-
-Version 0.3.0 revalidates a replacement input source after travel or death.
-The same plugin code passed fast-travel and death checks without rejoining in
-both single-player and a dedicated-server client on Proton; the log recorded
-two input replacements in each session. This fixes the world-rejoin problem
-present in v0.2.0.
+Autorun is a **client-only** mod for Enshrouded Steam build `26082781`.
+Install it on the PC where you play, whether you use single-player or join a
+dedicated server. Do not install it on the server. The mod stays inactive on an
+unsupported game executable or ShroudForge ABI.
 
 ## Download
 
-- [Autorun v0.3.0 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.0): download **`autorun-0.3.0.zip`**.
-- [ShroudForge 1.7.6 dev release](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919): download **[the ShroudForge ZIP](https://github.com/bonsaibauer/shroudforge/releases/download/v1.7.6-dev.40026840919/shroudforge-1.7.6-40026840919.zip)**.
+- [Autorun v0.3.0 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.0): download `autorun-0.3.0.zip`.
+- If Autorun is your only mod, use the [official ShroudForge 1.7.6 dev ZIP](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919), the loader used in the verified Autorun tests.
+- If you also use Free Airborne Architect, use its [patched ShroudForge 1.7.7 dev ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0) on the same client. Autorun 0.3.0 has not had a separate gameplay check with that loader.
 
-Use the ZIP assets, not GitHub's automatically generated source archives.
-The Autorun ZIP contains only the mod; ShroudForge is a separate download.
+Download the named ZIP assets, not GitHub's generated source archives. The
+Autorun ZIP does not include ShroudForge.
 
-## Install
+## Install and enable
 
 Follow the [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md)
-for ShroudForge and mod file placement, Proton launch options, and updates.
-Install Autorun on the **client** where you play. Its native plugin should be
-at `mods/autorun/bin/autorun.dll`. No server installation is needed.
+for ShroudForge placement, Proton launch options, and updates. Extract the
+Autorun ZIP inside the client's `mods` folder. Confirm
+`mods/autorun/mod.json` and `mods/autorun/bin/autorun.dll` exist.
 
-If upgrading from v0.2.0, save your `mods/autorun/extended.mod.json` settings
-before extracting the new ZIP. The packaged settings default to disabled with
-F8 as the toggle. Re-enable Autorun and restore your preferred hotkey after
-upgrading, then restart the game.
+The package is **disabled by default**. While the game is closed, set
+`"enabled": true` in `mods/autorun/extended.mod.json`, or enable Autorun in
+the ShroudForge Modloader and restart the game so its native DLL loads. The
+package defaults to **F8** for toggle and **S** for cancel. World Editor also
+uses F8; disable World Editor or change Autorun's toggle key. You can edit
+`settings.toggleAutorun.value` in `extended.mod.json` while the game is
+closed. For example, `"SDL:63"` selects F6. Preserve this file before an
+update so your enabled state and custom keybind are not reset.
 
-ShroudForge's ZIP enables several bundled mods. World Editor also uses F8;
-disable it or choose a different Autorun key. For an isolated first test,
-disable all bundled mods. No server installation or save changes are needed.
+On Proton, if the Modloader UI cannot start without WebView2, enable Autorun
+through `extended.mod.json` while the game is closed. The shared guide gives
+the loader settings for running without that UI.
 
-### Windows
-
-1. Start Enshrouded and press **F9** to open the ShroudForge Modloader.
-2. Enable Autorun there, disable World Editor if you want to keep F8, and
-   restart the game. Autorun's native DLL loads at startup.
-
-If the Modloader window is unavailable, close the game and set
-`"enabled": true` in `mods/autorun/extended.mod.json`, then restart. Windows
-gameplay is not yet verified; please report the result if you test it.
-
-### Linux / Proton
-
-For the tested setup without WebView2, while the game is closed:
-
-1. Open `shroudforge/config/modloader-config.json`. Under `modules`, set
-   `debugConsole.enabled` and `modloaderUi.enabled` to `false`. This avoids
-   the WebView2 startup error; the loader and mod still run.
-2. Open `mods/autorun/extended.mod.json` and set `"enabled": true`.
-3. Set `"enabled": false` in `mods/world-editor/extended.mod.json` to avoid
-   the F8 conflict. For the clean baseline test, all ShroudForge bundled mods
-   were disabled. Automatic ShroudForge updates were also disabled to hold the
-   tested version (`modules.updates.automatic.enabled: false` in its config).
-4. Start the game. The Modloader window is intentionally disabled on this
-   path; edit Autorun's `extended.mod.json` while the game is closed.
-
-#### Optional: use the Modloader UI on Proton
-
-The stock ShroudForge Modloader can also configure Autorun on Proton. This was
-tested with Proton Experimental under Hyprland/XWayland: F9 opened the window,
-the pointer was visible and aligned, and click-to-record F7 and Mouse X2
-bindings both worked in game. It requires Microsoft's WebView2 runtime in the
-**Enshrouded Proton prefix**; the runtime is not included with either ZIP.
-
-1. Close the game. Download the **x64 Evergreen Standalone Installer** from
-   [Microsoft's WebView2 page](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).
-   Use [Protontricks](https://github.com/Matoking/protontricks) to run the
-   downloaded installer in Enshrouded's prefix (Steam app ID `1203620`):
-
-   ```text
-   protontricks-launch --appid 1203620 /absolute/path/MicrosoftEdgeWebView2RuntimeInstallerX64.exe /silent /install
-   ```
-
-2. On the tested Hyprland/XWayland setup, this Wine setting fixed a hidden
-   pointer and clicks landing below their target:
-
-   ```text
-   protontricks 1203620 windowmanagerdecorated=n
-   ```
-
-3. In `shroudforge/config/modloader-config.json`, set
-   `modules.modloaderUi.enabled` to `true`. Keep
-   `modules.debugConsole.enabled` set to `false`; that window was not tested.
-   Set `general.locale` to `"en"` if you want the UI in English.
-4. Start the game, press **F9**, open Autorun, and record a keyboard or mouse
-   shortcut. If you enable Autorun for the first time in the UI, restart the
-   game so its native plugin loads.
-
-The no-WebView2 setup above remains available if this window behaves poorly
-on another desktop. To undo the Wine setting, run
-`protontricks 1203620 windowmanagerdecorated=y` while the game is closed.
-
-## Use and configure
-
-In a safe, open area, press F8 once and release the movement keys. The
-character should keep moving forward. Press F8 again to stop, then press F8
-and S to verify backward cancellation. Autorun preserves normal left/right
-steering and does not force sprint. Turn it off before opening menus.
-
-To change the toggle key, use the Modloader's Autorun keybind setting or edit
-`settings.toggleAutorun.value` in `mods/autorun/extended.mod.json` while the
-game is closed. The default is `"SDL:65"` (F8); `"SDL:64"` selects F7.
-`settings.cancelAutorun.value` defaults to `"SDL:22"` (S). See the
-[detailed mod guide](standalone/autorun/README.md) for more binding formats.
+## Check the installation
 
 After launch, `mods/autorun/autorun-plugin.log` should contain
-`Exact-build input hook installed`. If it reports an unsupported game image or
-ABI, disable Autorun and wait for a compatible build.
+`Exact-build input hook installed`. Press the configured toggle key once to
+move forward, again to stop, and press the backward key to cancel. A log
+message about an unsupported game image or ABI means the mod stayed inactive.
 
-## Development and attribution
-
-The release ZIP is built from [`standalone/autorun/`](standalone/autorun/). The
-[Windows package workflow](.github/workflows/autorun-windows.yml) builds and
-checks the standalone ZIP and checksum.
-
-The source branch contains the mod, its build tools, the pinned JSON submodule,
-and only the native hook helpers needed from ShroudForge. It does not require a
-checkout of the ShroudForge fork. Those helpers retain ShroudForge's
-[MIT license](LICENSE); the pinned JSON dependency has its own
-[license notice](standalone/autorun/LICENSE.nlohmann). ShroudForge itself is by
-bonsaibauer and its contributors. The Autorun release includes these notices.
-Game binaries, assets, saves, and local logs are not distributed here.
+Single-player and dedicated-server client gameplay were verified with Proton
+Experimental and the stock ShroudForge 1.7.6 dev package. Native Windows
+and the patched 1.7.7 loader combination still need a separate Autorun
+check. For controls, behavior limits, and development details, see the
+[detailed mod guide](standalone/autorun/README.md).
