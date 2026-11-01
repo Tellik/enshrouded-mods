@@ -82,12 +82,15 @@ those windows disabled.
 
 1. Close the game or stop the server. Read the mod author's guide for its
    targets, supported versions, dependencies, and default enabled state.
-2. Open its ZIP. Find the folder that contains `mod.json` (and usually
-   `extended.mod.json`). Put that **folder** inside the game's `mods/`
-   directory. The result is `mods/<mod-id>/mod.json`. Do not leave the ZIP in
-   `mods/`, nest another enclosing folder, or copy a mod's files into the
-   `shroudforge/` runtime directory. Follow the author's instructions for any
-   extra files outside the mod folder.
+2. Treat the folder containing `enshrouded.exe` or `enshrouded_server.exe` as
+   `./`. The destination is **`./mods/<mod-id>/mod.json`**, relative to that
+   executable. Keep the downloaded ZIP in Downloads. Open it and copy only
+   the inner `<mod-id>` folder (the folder containing `mod.json`) into
+   `./mods/`. Some archive tools make an extra folder named after the ZIP when
+   you choose **Extract Here**. If you see
+   `./mods/MOD-VERSION/<mod-id>/mod.json`, move the inner `<mod-id>` folder up
+   one level. Do not leave the ZIP or that extra folder in `./mods/`.
+   Follow the author's instructions for any files outside the mod folder.
 3. If the mod is disabled, enable it in the Modloader or set `"enabled": true`
    in its `extended.mod.json` while the process is stopped. Native DLL mods
    generally need a restart to load. Review hotkeys and any bundled ShroudForge
@@ -105,7 +108,8 @@ For a one-folder ZIP whose folder name matches the mod ID, use the optional
 [configuration-preserving installer](../tools/install_mod.py) from this
 repository. Open that link, use GitHub's **Download raw file** action, and
 save `install_mod.py` next to the downloaded mod ZIP. Python 3.9 or newer is
-required.
+required. This installer reads the ZIP directly, so an archive tool cannot
+create an extra enclosing folder. It works for first installs and updates.
 Run it while the game or server is stopped:
 
 ```text
