@@ -204,7 +204,7 @@ bool enabled(const std::filesystem::path& root) {
 DWORD WINAPI worker(void*) {
     const auto root = plugin_dir();
     if (root.empty()) return 0;
-    log(root, "Wand Durability 0.2.1 experimental plugin starting");
+    log(root, "Wand Durability 0.2.2 experimental plugin starting");
     auto* runtime = GetModuleHandleW(L"kfc-runtime.dll");
     for (unsigned i = 0; !runtime && i < 300; ++i) {
         Sleep(100); runtime = GetModuleHandleW(L"kfc-runtime.dll");

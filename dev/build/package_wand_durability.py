@@ -18,7 +18,7 @@ def verify(path):
         assert len(archive.namelist()) == len(expected) and set(archive.namelist()) == expected
         assert archive.testzip() is None
         manifest = json.loads(archive.read('wand-durability/mod.json'))
-        assert manifest['id'] == 'wand-durability' and manifest['version'] == '0.2.1'
+        assert manifest['id'] == 'wand-durability' and manifest['version'] == '0.2.2'
         settings = json.loads(archive.read('wand-durability/extended.mod.json'))
         assert settings['enabled'] is True and settings['targets'] == ['client', 'server']
         assert archive.read('wand-durability/native-plugin.ini').decode().splitlines() == [

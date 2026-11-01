@@ -4,11 +4,12 @@ Wand Durability makes a primary wand attack take its normal durability cost
 once, even when Multishot adds projectiles. It is an experimental native mod
 for ShroudForge's ABI-12 runtime and exact Enshrouded client build 26082781
 or dedicated-server build 26083076. The stock ShroudForge 1.7.6 dev build
-40026840919 passed gameplay tests. The patched 1.7.7 dev build used by Free
-Airborne Architect exports the required ABI-12 functions; this combination
-has not had a separate Wand Durability gameplay check.
+40026840919 passed gameplay tests. The patched 1.7.7 dev client build used by
+Free Airborne Architect exports the required ABI-12 functions and is treated
+as compatible with Wand Durability. This pairing has not had a separate Wand
+gameplay check.
 
-Download the [v0.2.1 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.1)
+Download the [v0.2.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.2)
 and follow the [installation guide](mods/wand-durability/README.md). The
 release ZIP contains only Wand Durability; download ShroudForge separately.
 
