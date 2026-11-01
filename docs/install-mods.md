@@ -104,7 +104,8 @@ installed mod can reset your choices.
 For a one-folder ZIP whose folder name matches the mod ID, use the optional
 [configuration-preserving installer](../tools/install_mod.py) from this
 repository. Open that link, use GitHub's **Download raw file** action, and
-save `install_mod.py` next to the downloaded mod ZIP. Python 3 is required.
+save `install_mod.py` next to the downloaded mod ZIP. Python 3.9 or newer is
+required.
 Run it while the game or server is stopped:
 
 ```text
