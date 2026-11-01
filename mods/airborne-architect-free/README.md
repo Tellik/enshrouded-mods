@@ -1,4 +1,4 @@
-# Free Airborne Architect 0.2.0
+# Free Airborne Architect 0.2.1
 
 This ShroudForge mod makes **Airborne Architect** cost **0 skill points**. It
 also adds a direct link from the nearest free Root node so the skill is
@@ -18,13 +18,15 @@ node or its original cost has changed.
 
 Follow the [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md)
 for file placement, client and server setup, updates, and removal. Download
-these two ZIP assets from the [v0.2.0 release](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0):
+these two ZIP assets from the [v0.2.1 release](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.1):
 
-- `airborne-architect-free-0.2.0.zip` (this mod)
+- `airborne-architect-free-0.2.1.zip` (this mod)
 - `shroudforge-1.7.7-dev-40603042431-asset-commit-fix.zip` (required patched loader)
 
 Use the patched loader on both client and server. The mod is enabled by
-default. Confirm its script is at `mods/airborne-architect-free/src/mod.lua`.
+default. Relative to the folder containing `enshrouded.exe` or
+`enshrouded_server.exe`, confirm its script is at
+`./mods/airborne-architect-free/src/mod.lua`.
 The stock 1.7.7 dev package has been observed to fail when publishing this
 asset change under Wine/Proton; native Windows gameplay remains untested.
 
@@ -48,17 +50,25 @@ separate host-and-guest check.
    `shroudforge/`, and `mods/` beside `enshrouded.exe`. On Linux/Proton, set
    Steam Launch Options to
    `WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%`.
-3. Extract `airborne-architect-free-0.2.0.zip` inside `mods/`. Check
-   `mods/airborne-architect-free/mod.json` and
-   `mods/airborne-architect-free/src/mod.lua`. The packaged configuration
-   starts enabled. Start the game and perform the [check](#check) below.
+3. Treat the folder containing `enshrouded.exe` as `./`. Open
+   `airborne-architect-free-0.2.1.zip` and copy its inner
+   `airborne-architect-free/` folder into `./mods/`. Check
+   `./mods/airborne-architect-free/mod.json` and
+   `./mods/airborne-architect-free/src/mod.lua`. If your archive tool creates
+   `./mods/airborne-architect-free-0.2.1/airborne-architect-free/`, move the
+   inner mod folder up one level. The packaged configuration starts enabled.
+   Start the game and perform the [check](#check) below.
 
 ### Dedicated-server steps
 
 1. Stop the server through its control panel and back up its world. Find its
    folder containing `enshrouded_server.exe`.
-2. Extract the patched ShroudForge ZIP there, then extract the mod ZIP inside
-   `mods/`. For a Wine/Proton server, set the game-process environment to
+2. Treat the folder containing `enshrouded_server.exe` as `./`. Extract the
+   patched ShroudForge ZIP there, then copy the mod ZIP's inner
+   `airborne-architect-free/` folder into `./mods/`. Confirm
+   `./mods/airborne-architect-free/mod.json` exists, without an extra folder
+   named after the ZIP. For a Wine/Proton server, set the game-process
+   environment to
    `WINEDLLOVERRIDES=dbghelp=native,builtin;winmm=native,builtin`.
 3. The packaged mod starts enabled. Start the server when you choose and check
    its ShroudForge log for the committed asset. Install the same mod and loader
