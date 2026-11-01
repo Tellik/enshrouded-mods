@@ -1,4 +1,4 @@
-# Free Airborne Architect 0.1.1
+# Free Airborne Architect 0.2.0
 
 This ShroudForge mod makes **Airborne Architect** cost **0 skill points**. It
 also adds a direct link from the nearest free Root node so the skill is
@@ -14,17 +14,19 @@ game asset reader before committing. Native Windows gameplay remains untested.
 On a different game build, the patch refuses to change the tree if the expected
 node or its original cost has changed.
 
-## Install
+## Download and install
 
-1. Close the client or stop the dedicated server using its normal controls.
-2. On Linux/Proton, install the patched ShroudForge 1.7.7 dev package from this
-   project's `releases` folder. Preserve your existing mod settings when
-   updating. On native Windows, the stock 1.7.7 dev loader has not been tested
-   with this mod.
-3. Copy the `airborne-architect-free` folder into that installation's `mods`
-   folder. The script must be at
-   `mods/airborne-architect-free/src/mod.lua`.
-4. The mod is enabled by default. Start the client or server normally.
+Follow the [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md)
+for file placement, client and server setup, updates, and removal. Download
+these two ZIP assets from the [v0.2.0 release](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0):
+
+- `airborne-architect-free-0.2.0.zip` (this mod)
+- `shroudforge-1.7.7-dev-40603042431-asset-commit-fix.zip` (required patched loader)
+
+Use the patched loader on both client and server. The mod is enabled by
+default. Confirm its script is at `mods/airborne-architect-free/src/mod.lua`.
+The stock 1.7.7 dev package has been observed to fail when publishing this
+asset change under Wine/Proton; native Windows gameplay remains untested.
 
 For single-player, install it on the client; unlocking at zero points has been
 verified there. For a dedicated-server world, install it on the server **and
@@ -35,12 +37,6 @@ on an unmodded dedicated server. A server installation alone has not been shown
 to update an unmodded client's UI. With both sides modded, unlocking, refunding,
 and unlocking again worked on a private dedicated test server. Hosted co-op
 needs a separate host-and-guest check.
-
-On Linux/Proton, ShroudForge's DLLs may need the Steam launch option:
-
-```text
-WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%
-```
 
 ## Check
 
@@ -67,6 +63,7 @@ independent implementation of the behavior described on the [Zero Cost Build
 Camera Nexus page](https://www.nexusmods.com/enshrouded/mods/177); it does not
 include any files or assets from that mod.
 
-Version 0.1.1 fixes startup failure on ShroudForge's userdata-backed game
-arrays. Version 0.1.0 did not apply the patch. The loader commit fix is separate
-from the mod and must be present for the patch to persist under Proton.
+Version 0.2.0 is the client-and-server release verified on a private dedicated
+test server. Version 0.1.1 fixed startup failure on ShroudForge's userdata-backed
+game arrays; version 0.1.0 did not apply the patch. The loader commit fix is
+separate from the mod and must be present for the patch to persist under Proton.
