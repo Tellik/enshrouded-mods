@@ -34,70 +34,21 @@ it works in your local world and automatically stays inactive in the remote
 world. If that server has the mod, its installation applies to every player.
 No per-player handshake or manual switching is required.
 
-## Install on a local client
+## Install
 
-These steps apply to Windows and Linux/Proton. They are required for
-single-player, or for the player **hosting** a co-op world. Guests joining that
-world do not need to install the mod.
+Follow the [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md)
+for client and dedicated-server file placement, Proton/Wine launch options,
+updates, and removal. Install the stock ShroudForge 1.7.6 ZIP linked above,
+then extract the Wand Durability ZIP inside `mods`. Confirm
+`mods/wand-durability/bin/wand-durability.dll` exists.
 
-1. Close Enshrouded. Open its game folder, the one containing
-   `enshrouded.exe`. In Steam, use **Manage → Browse local files**.
-2. If ShroudForge is not installed, extract the **entire ShroudForge ZIP** into
-   this folder. Its `dbghelp.dll`, `dinput8.dll`, `winmm.dll`, `shroudforge`,
-   and `mods` entries must sit beside `enshrouded.exe`. ShroudForge's ZIP also
-   includes other gameplay mods; disable any you do not intend to use.
-3. Extract the Wand Durability ZIP **inside** `mods`. Confirm the resulting
-   files include `mods/wand-durability/mod.json` and
-   `mods/wand-durability/bin/wand-durability.dll`. Do not leave the ZIP in
-   `mods` or add another folder level.
-4. In `mods/wand-durability/extended.mod.json`, change `"enabled": false` to
-   `"enabled": true`, then start the game. If replacing an earlier test
-   package, save your enabled setting first; extracting this ZIP resets it to
-   `false`.
+The packaged mod is **disabled by default**. While the game or server is
+stopped, set `"enabled": true` in `mods/wand-durability/extended.mod.json`.
+Save that file before an update because extracting the package resets it to
+`false`. The table above identifies the authoritative machine for each world.
+Connecting clients do not need the mod for a dedicated-server world.
 
-On **Linux/Proton**, set these Steam launch options so Wine loads ShroudForge's
-local DLLs:
-
-```text
-WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%
-```
-
-If the ShroudForge Modloader window needs WebView2 and does not open, you can
-use the file setting above without the UI. While the game is closed, set
-`modules.modloaderUi.enabled` and `modules.debugConsole.enabled` to `false`
-in `shroudforge/config/modloader-config.json`. This leaves the native mod
-loaded. On Windows, the ShroudForge UI can also enable the mod, but restart the
-game afterward so its native DLL loads.
-
-## Install on a dedicated server
-
-Install on the **server machine**, in the folder containing
-`enshrouded_server.exe`. Installing only on a connecting client cannot change
-that server's durability costs. Players joining a modded server do not need
-ShroudForge or Wand Durability on their own clients.
-
-1. Stop the server using its normal control panel or service manager, and back
-   up the world. Keep it stopped while copying files.
-2. If ShroudForge is not installed, extract the **entire ShroudForge ZIP**
-   beside `enshrouded_server.exe`. Disable the bundled gameplay mods you do
-   not intend to run; some are enabled in the stock ZIP.
-3. Extract the Wand Durability ZIP into the server's `mods` folder, yielding
-   `mods/wand-durability/bin/wand-durability.dll`. Set `"enabled": true` in
-   `mods/wand-durability/extended.mod.json`.
-4. On a **Wine/Proton server**, set the DLL override for the game process.
-   For a launch script that runs Wine directly, the game launch can be:
-
-   ```text
-   WINEDLLOVERRIDES="dbghelp=native,builtin;winmm=native,builtin" wine ./enshrouded_server.exe
-   ```
-
-   Add the setting to your existing Pterodactyl/Docker launch configuration
-   if it starts Wine another way. A native Windows server does not need this
-   override.
-5. Start the server using its normal control panel. No client installation is
-   needed for the server-wide correction.
-
-## Check operation and update
+## Check operation
 
 In `mods/wand-durability/wand-durability.log` on the machine that owns the
 world, look for `Exact-build client durability hook installed` or
