@@ -35,8 +35,10 @@ screen**. Client and server each load their own skill-tree asset. With only the
 client modded, the UI shows zero points but clicking the skill leaves it locked
 on an unmodded dedicated server. A server installation alone has not been shown
 to update an unmodded client's UI. With both sides modded, unlocking, refunding,
-and unlocking again worked on a private dedicated test server. Hosted co-op
-needs a separate host-and-guest check.
+and unlocking again worked on a private dedicated test server. A later live
+dedicated-server installation logged `Committed 1 changed resources`, and the
+server owner confirmed that the skill worked there too. Hosted co-op needs a
+separate host-and-guest check.
 
 ## Check
 
@@ -64,6 +66,7 @@ Camera Nexus page](https://www.nexusmods.com/enshrouded/mods/177); it does not
 include any files or assets from that mod.
 
 Version 0.2.0 is the client-and-server release verified on a private dedicated
-test server. Version 0.1.1 fixed startup failure on ShroudForge's userdata-backed
+test server and confirmed on a live dedicated server. Version 0.1.1 fixed
+startup failure on ShroudForge's userdata-backed
 game arrays; version 0.1.0 did not apply the patch. The loader commit fix is
 separate from the mod and must be present for the patch to persist under Proton.
