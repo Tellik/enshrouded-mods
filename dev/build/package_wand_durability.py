@@ -18,9 +18,9 @@ def verify(path):
         assert len(archive.namelist()) == len(expected) and set(archive.namelist()) == expected
         assert archive.testzip() is None
         manifest = json.loads(archive.read('wand-durability/mod.json'))
-        assert manifest['id'] == 'wand-durability' and manifest['version'] == '0.2.0'
+        assert manifest['id'] == 'wand-durability' and manifest['version'] == '0.2.1'
         settings = json.loads(archive.read('wand-durability/extended.mod.json'))
-        assert settings['enabled'] is False and settings['targets'] == ['client', 'server']
+        assert settings['enabled'] is True and settings['targets'] == ['client', 'server']
         assert archive.read('wand-durability/native-plugin.ini').decode().splitlines() == [
             '[Plugin]', 'Enabled=1', 'Dll=bin/wand-durability.dll']
         dll = archive.read('wand-durability/bin/wand-durability.dll')
@@ -29,7 +29,7 @@ def verify(path):
         assert dll[nt:nt+4] == b'PE\0\0'
         assert struct.unpack_from('<H', dll, nt+4)[0] == 0x8664
         assert struct.unpack_from('<H', dll, nt+22)[0] & 0x2000
-    print(f'Verified {path.name}: standalone Windows x64 plugin, disabled by default')
+    print(f'Verified {path.name}: standalone Windows x64 plugin, enabled by default')
 
 
 def main():

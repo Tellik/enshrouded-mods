@@ -1,23 +1,29 @@
-# Wand Durability v0.2.0
+# Wand Durability v0.2.1
 
 Apply the normal single-shot durability cost once per primary wand attack,
 including attacks with built-in Multishot or skill-generated bonus projectiles.
 This is normally one durability per attack. The game still controls projectile
 count, damage, durability-saving effects, and the world's durability setting.
 
-This experimental native mod requires the **unmodified ShroudForge 1.7.6 dev
-build 40026840919**. It supports the exact Enshrouded **client build
+This experimental native mod requires ShroudForge's **ABI-12 world identity
+API**. The stock ShroudForge 1.7.6 dev build 40026840919 passed gameplay
+tests. The patched 1.7.7 dev build 40603042431 used by Free Airborne
+Architect exports the same required functions, so it should load this mod;
+this combination has not had a separate Wand Durability gameplay check. The
+mod supports the exact Enshrouded **client build
 26082781** and **dedicated-server build 26083076**. The mod stays inactive if
 the executable or ShroudForge ABI does not match.
 
 ## Download
 
-- [Wand Durability v0.2.0 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.0): download `wand-durability-0.2.0.zip`. Its `.sha256` asset is a checksum.
-- [ShroudForge 1.7.6 dev release](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919): download `shroudforge-1.7.6-40026840919.zip` separately.
+- [Wand Durability v0.2.1 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.1): download `wand-durability-0.2.1.zip`. Its `.sha256` asset is a checksum.
+- [ShroudForge 1.7.6 dev release](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919): download `shroudforge-1.7.6-40026840919.zip` for the gameplay-tested loader.
+- If you also use Free Airborne Architect under Proton, use its [patched ShroudForge 1.7.7 dev ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0) on that machine. Its exported ABI-12 functions match this mod's runtime check, but Wand Durability has not yet been gameplay-tested with it.
 
 Use the ZIP assets, not GitHub's generated source archives. The Wand Durability
 ZIP contains one `wand-durability` folder and no game files or ShroudForge
-runtime. The packaged mod is **disabled by default**; enable it after copying.
+runtime. Version 0.2.1 defaults to **enabled**; the older v0.2.0 ZIP defaults
+to disabled.
 
 ## Which machine needs the mod?
 
@@ -34,19 +40,40 @@ it works in your local world and automatically stays inactive in the remote
 world. If that server has the mod, its installation applies to every player.
 No per-player handshake or manual switching is required.
 
-## Install
+## Install on a client
 
-Follow the [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md)
-for client and dedicated-server file placement, Proton/Wine launch options,
-updates, and removal. Install the stock ShroudForge 1.7.6 ZIP linked above,
-then extract the Wand Durability ZIP inside `mods`. Confirm
-`mods/wand-durability/bin/wand-durability.dll` exists.
+1. Close Enshrouded. In Steam, choose **Manage → Browse local files** and find
+   the folder containing `enshrouded.exe`.
+2. Install the ShroudForge ZIP selected above into that folder. On Proton, set
+   Steam Launch Options to
+   `WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%`.
+3. Extract `wand-durability-0.2.1.zip` inside the game's `mods` folder. Check
+   `mods/wand-durability/mod.json` and
+   `mods/wand-durability/bin/wand-durability.dll`; there must be no extra
+   enclosing folder. Version 0.2.1 starts enabled. If updating an existing
+   install, retain your changed `extended.mod.json` as described below.
+4. Start the game and perform the [operation check](#check-operation) in a
+   single-player world. A local client copy stays inactive in a remote world.
 
-The packaged mod is **disabled by default**. While the game or server is
-stopped, set `"enabled": true` in `mods/wand-durability/extended.mod.json`.
-Save that file before an update because extracting the package resets it to
-`false`. The table above identifies the authoritative machine for each world.
-Connecting clients do not need the mod for a dedicated-server world.
+## Install on a dedicated server
+
+1. Stop the server using its control panel and back up its world. Use the
+   server's folder containing `enshrouded_server.exe`.
+2. Install the selected ShroudForge ZIP there and extract the Wand Durability
+   ZIP inside `mods`, yielding `mods/wand-durability/mod.json`. For a Wine or
+   Proton server, set its game-process environment to
+   `WINEDLLOVERRIDES=dbghelp=native,builtin;winmm=native,builtin`.
+3. Version 0.2.1 starts enabled. If updating an existing installation, retain
+   its changed `extended.mod.json` while the server is stopped. Check bundled
+   ShroudForge mods so only intended gameplay changes run.
+4. Start the server when you choose. Check the server log as described below,
+   then test from a connected client. Guests do not need a client copy.
+
+For full ShroudForge installation steps and WebView2 troubleshooting, see the
+[shared guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md).
+Before any update, keep the installed `extended.mod.json`: extracting a ZIP
+directly over this mod can reset the enabled state. The shared guide provides
+a configuration-preserving installer and manual update steps.
 
 ## Check operation
 
@@ -82,7 +109,7 @@ remote world and stayed inactive.
 
 Native Windows gameplay, player-hosted co-op, other wands, skill-generated
 Multishot, and travel/death or world-rejoin cases remain unverified. This is
-why v0.2.0 is marked as a prerelease.
+why v0.2.1 is marked as a prerelease.
 
 ## Implementation and limits
 
@@ -127,7 +154,7 @@ with CMake on Windows x64. Initialize the pinned JSON submodule first.
 cmake -S mods/wand-durability/native -B build/wand-durability -A x64
 cmake --build build/wand-durability --config Release
 ctest --test-dir build/wand-durability -C Release --output-on-failure
-python dev/build/package_wand_durability.py --dll build/wand-durability/Release/wand-durability.dll --out build/wand-durability-0.2.0.zip
+python dev/build/package_wand_durability.py --dll build/wand-durability/Release/wand-durability.dll --out build/wand-durability-0.2.1.zip
 ```
 
 On Linux the same CMake project builds the portable policy tests and the hook

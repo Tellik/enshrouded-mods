@@ -204,19 +204,19 @@ bool enabled(const std::filesystem::path& root) {
 DWORD WINAPI worker(void*) {
     const auto root = plugin_dir();
     if (root.empty()) return 0;
-    log(root, "Wand Durability 0.2.0 experimental plugin starting");
+    log(root, "Wand Durability 0.2.1 experimental plugin starting");
     auto* runtime = GetModuleHandleW(L"kfc-runtime.dll");
     for (unsigned i = 0; !runtime && i < 300; ++i) {
         Sleep(100); runtime = GetModuleHandleW(L"kfc-runtime.dll");
     }
-    if (!runtime) { log(root, "Stock ShroudForge runtime unavailable; inactive"); return 0; }
+    if (!runtime) { log(root, "ShroudForge runtime unavailable; inactive"); return 0; }
     using AbiFn = std::uint32_t (__cdecl*)();
     using SessionFn = std::uint64_t (__cdecl*)();
     const auto abi = reinterpret_cast<AbiFn>(GetProcAddress(runtime, "KfcRuntimeAbi"));
     const auto world_session = reinterpret_cast<SessionFn>(GetProcAddress(runtime, "KfcRuntimeWorldSessionId"));
     const auto world_kind = reinterpret_cast<AbiFn>(GetProcAddress(runtime, "KfcRuntimeWorldContextKind"));
     if (!abi || abi() != 12 || !world_session || !world_kind) {
-        log(root, "Required stock ABI-12 world identity API unavailable; inactive"); return 0;
+        log(root, "Required ABI-12 world identity API unavailable; inactive"); return 0;
     }
     const auto* profile = install_hook();
     if (!profile) { log(root, "Unsupported image or changed hook bytes; inactive"); return 0; }
