@@ -1,4 +1,4 @@
-# Autorun v0.3.1 installation guide
+# Autorun v0.3.2 installation guide
 
 Autorun is a **client-only** mod for Enshrouded Steam build `26082781`.
 Install it on the PC where you play, whether you use single-player or join a
@@ -7,9 +7,9 @@ unsupported game executable or ShroudForge ABI.
 
 ## Download
 
-- [Autorun v0.3.1 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.1): download `autorun-0.3.1.zip`.
+- [Autorun v0.3.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.2): download `autorun-0.3.2.zip`.
 - If Autorun is your only mod, use the [official ShroudForge 1.7.6 dev ZIP](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919), the loader used in the verified Autorun tests.
-- If you also use Free Airborne Architect, use its [patched ShroudForge 1.7.7 dev ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0) on the same client. Autorun has not had a separate gameplay check with that loader.
+- If you also use Free Airborne Architect, use its [patched ShroudForge 1.7.7 dev ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.1) on the same client. The mod owner confirmed Autorun works on this patched client loader.
 
 Download the named ZIP assets, not GitHub's generated source archives. The
 Autorun ZIP does not include ShroudForge.
@@ -17,14 +17,16 @@ Autorun ZIP does not include ShroudForge.
 ## Install and enable
 
 Follow the [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md)
-for ShroudForge placement, Proton launch options, and updates. Extract the
-Autorun ZIP inside the client's `mods` folder. Confirm
-`mods/autorun/mod.json` and `mods/autorun/bin/autorun.dll` exist.
+for ShroudForge placement, Proton launch options, and updates. Relative to the
+folder containing `enshrouded.exe`, put the ZIP's inner `autorun/` folder in
+`./mods/`. Confirm `./mods/autorun/mod.json` and
+`./mods/autorun/bin/autorun.dll` exist. If your archive tool creates
+`./mods/autorun-0.3.2/autorun/`, move the inner `autorun/` folder up one level.
 
-Version 0.3.1 defaults to **enabled**; the older v0.3.0 ZIP defaults to
-disabled. The package defaults
-to **F8** for toggle and **S** for cancel. World Editor also uses F8; disable
-World Editor or change Autorun's toggle key. You can edit
+Version 0.3.2 defaults to **enabled**; the older v0.3.0 ZIP defaults to
+disabled. The package defaults to **F8** for toggle and **S** for cancel.
+World Editor also uses F8; disable World Editor or change Autorun's toggle
+key. You can edit
 `settings.toggleAutorun.value` in `extended.mod.json` while the game is
 closed. For example, `"SDL:63"` selects F6. Before updating, use the
 shared guide's configuration-preserving installer or save and restore
@@ -42,7 +44,7 @@ move forward, again to stop, and press the backward key to cancel. A log
 message about an unsupported game image or ABI means the mod stayed inactive.
 
 Single-player and dedicated-server client gameplay were verified with Proton
-Experimental and the stock ShroudForge 1.7.6 dev package. Native Windows
-and the patched 1.7.7 loader combination still need a separate Autorun
-check. For controls, behavior limits, and development details, see the
+Experimental and the stock ShroudForge 1.7.6 dev package. The mod owner also
+confirmed Autorun works on the patched 1.7.7 client loader. Native Windows
+gameplay remains unverified. For controls, behavior limits, and development details, see the
 [detailed mod guide](standalone/autorun/README.md).
