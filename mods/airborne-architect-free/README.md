@@ -1,0 +1,58 @@
+# Free Airborne Architect 0.1.0
+
+This ShroudForge mod makes **Airborne Architect** cost **0 skill points**. It
+also adds a direct link from the nearest free Root node so the skill is
+reachable without buying a path through the tree. No other skill is changed.
+
+The mod uses ShroudForge's pregame asset patch. The same folder targets client
+and dedicated server. It was checked against Enshrouded client build
+**26082781**, dedicated-server build **26083076**, and ShroudForge **1.7.6**.
+On a different game build, the patch refuses to change the tree if the expected
+node or its original cost has changed.
+
+## Install
+
+1. Close the client or stop the dedicated server using its normal controls.
+2. Install ShroudForge 1.7.6 if it is not already installed.
+3. Copy the `airborne-architect-free` folder into that installation's `mods`
+   folder. The script must be at
+   `mods/airborne-architect-free/src/mod.lua`.
+4. The mod is enabled by default. Start the client or server normally.
+
+For single-player, install it on the client. For a dedicated-server world,
+install it on the server **and each client that should see the zero-point price
+and Root link in its Skills screen**. Client and server each load their own
+skill-tree asset. A server installation alone has not been shown to update an
+unmodded client's UI, and a client installation alone has not been shown to
+override the server's skill validation. Hosted co-op also needs an in-game
+check of host and guest behavior.
+
+On Linux/Proton, ShroudForge's DLLs may need the Steam launch option:
+
+```text
+WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%
+```
+
+## Check
+
+In the ShroudForge log, find `Free Airborne Architect: cost 0; free Root link
+ready`. Then open Skills (H): Airborne Architect should show **0** points,
+be reachable from a Root node, and unlock without reducing the available
+points. For a dedicated server, check the same result with a connected client
+and confirm it remains after reconnecting. This gameplay check has not yet
+been completed for this package.
+
+To disable, set `"enabled": false` in `extended.mod.json` and restart the
+process. To remove it, close the game or stop the server and delete the mod
+folder. Existing unlocked skills and character saves are not edited by this
+mod; the game controls the result of a later respec.
+
+## Implementation
+
+The script checks the skill node ID, English localization ID, original cost,
+Root node, and proposed link ID before writing. It adds one directed link to
+the skill-tree link list and the two nodes' link references, then changes only
+the skill's `costs` field. Re-running the patch is idempotent. The source is an
+independent implementation of the behavior described on the [Zero Cost Build
+Camera Nexus page](https://www.nexusmods.com/enshrouded/mods/177); it does not
+include any files or assets from that mod.
