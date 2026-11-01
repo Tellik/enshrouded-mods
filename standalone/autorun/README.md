@@ -2,20 +2,24 @@
 
 This is a separate, client-only ShroudForge mod. It does not replace
 `kfc-runtime.dll`, `shroudforge-runtime.dll`, or any other ShroudForge file.
-ShroudForge 1.7.6 loads the mod's own `bin/autorun.dll` through
+ShroudForge loads the mod's own `bin/autorun.dll` through
 `native-plugin.ini`. The plugin is restricted to Enshrouded Steam build
-`26082781`; it stays inactive if the executable or stock ShroudForge ABI does
-not match. Single-player and dedicated-server Proton tests on stock
-ShroudForge 1.7.6 passed with F7 as a custom hotkey.
+`26082781` and ShroudForge's ABI-12 world API; it stays inactive if either
+check fails. Single-player and dedicated-server Proton tests on stock
+ShroudForge 1.7.6 passed with F7 as a custom hotkey. The patched 1.7.7 build
+used by Free Airborne Architect has not had a separate Autorun gameplay check.
 
-Download the `autorun-0.3.0.zip` asset from the
-[Autorun v0.3.0 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.0)
+Download the `autorun-0.3.1.zip` asset from the
+[Autorun v0.3.1 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.1)
 and `shroudforge-1.7.6-40026840919.zip` from the separate
 [ShroudForge 1.7.6 dev release](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919).
+If you also use Free Airborne Architect, use its
+[patched 1.7.7 loader ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0)
+on the same client instead. That combination still needs its own gameplay check.
 
 ## Install the files (Windows and Linux/Proton)
 
-1. Close the game. Extract the unmodified ShroudForge 1.7.6 ZIP into the
+1. Close the game. Extract the selected ShroudForge ZIP into the
    Enshrouded folder containing `enshrouded.exe`. Its three proxy DLLs go
    beside the executable; its `shroudforge` and `mods` folders go beside it.
    Back up an existing `mods/autorun` folder, if present.
@@ -24,19 +28,24 @@ and `shroudforge-1.7.6-40026840919.zip` from the separate
    `native-plugin.ini`, and `bin/autorun.dll`. Do not put the ZIP itself in
    `mods`; the native DLL loader needs a directory.
 
-On upgrade, the ZIP's `extended.mod.json` restores the disabled, default-F8
-settings. Restore your settings from the backup or re-enable and rebind Autorun
-in ShroudForge after extraction, then restart the game.
+Version 0.3.1 starts enabled; the older v0.3.0 ZIP starts disabled. On upgrade,
+extracting either ZIP directly over the existing mod can reset its enabled
+state and keybind. Use the
+[shared guide's configuration-preserving installer](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md#update-a-mod-without-losing-settings)
+or save the old `extended.mod.json`, extract the new ZIP, and restore that file
+before restarting. The installer also saves the previous mod folder for rollback.
 
-The stock ShroudForge ZIP enables several bundled mods. World Editor uses
+The stock ShroudForge 1.7.6 ZIP can enable bundled mods. World Editor uses
 F8, Autorun's default key. Disable World Editor or change Autorun's key;
-for an isolated first test, disable all bundled mods.
+for an isolated first test, disable all bundled mods. The patched 1.7.7
+loader ships its bundled mods disabled by default, but review their states
+after any loader update.
 
 ### Windows
 
 1. Start Enshrouded and press F9 to open the ShroudForge Modloader.
-2. Enable Autorun. Disable World Editor if you want to keep F8 for Autorun.
-   Restart the game so its native DLL loads at startup.
+2. Version 0.3.1 starts enabled. Disable World Editor if you want to keep F8
+   for Autorun. Restart the game so its native DLL loads at startup.
 
 Native Windows gameplay has not yet been tested. The Windows build and ZIP
 layout passed automated checks.
@@ -55,8 +64,8 @@ Then, while the game is closed:
 1. Open `shroudforge/config/modloader-config.json`. Under `modules`, change
    the `enabled` values for `debugConsole` and `modloaderUi` to `false`.
    This prevents the two WebView2 windows from causing a startup error.
-2. Open `mods/autorun/extended.mod.json` and change `"enabled": false` to
-   `"enabled": true`.
+2. Version 0.3.1 starts enabled. On upgrade, preserve your existing
+   `mods/autorun/extended.mod.json` so its enabled state and hotkeys remain.
 3. For an isolated first test, set `"enabled": false` in each bundled mod's
    `extended.mod.json`, especially `mods/world-editor`. To hold ShroudForge
    at the tested version, also set `modules.updates.automatic.enabled` to
@@ -67,9 +76,9 @@ Then, while the game is closed:
 
 To configure the mod through ShroudForge on Proton, install the official
 [Microsoft WebView2 x64 Evergreen Standalone Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
-in Enshrouded's Proton prefix. The [main guide](../../README.md#optional-use-the-modloader-ui-on-proton)
-has the Protontricks commands and the Hyprland/XWayland window setting that
-made the cursor visible and clicks accurate in the tested setup. Then enable
+in Enshrouded's Proton prefix. The [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md#webview2-window-does-not-open)
+has the Protontricks command and the Hyprland window setting that made the
+cursor visible and clicks accurate in the tested setup. Then enable
 `modules.modloaderUi.enabled` and press F9 in game. The runtime is not part of
 either release ZIP.
 
@@ -103,8 +112,8 @@ malformed settings fail closed and are reported in `autorun-plugin.log`.
 The current native plugin recognizes A–Z, 0–9, F1–F12, Enter, Escape,
 Backspace, Tab, Space, Insert, Delete, Home, End, Page Up/Down, arrow keys,
 and mouse buttons 1–5. It does not consume those keys, so avoid conflicting
-game or mod bindings. The package is disabled by default so each installation
-can enable it after checking its game build and bindings.
+game or mod bindings. Version 0.3.1 starts enabled; the
+native hook still refuses an unsupported game build or ABI.
 
 ## Use and limits
 

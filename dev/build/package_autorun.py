@@ -36,8 +36,8 @@ def expected_members(dll: bytes) -> dict[str, bytes]:
     extension = json.loads((PACKAGE / "extended.mod.json").read_text())
     if manifest["id"] != "autorun" or extension["targets"] != ["client"]:
         raise ValueError("unexpected mod identity or target")
-    if extension["enabled"]:
-        raise ValueError("the standalone test package must default to disabled")
+    if extension["enabled"] is not True:
+        raise ValueError("the package must default to enabled")
     if b"Dll=bin/autorun.dll" not in (PACKAGE / "native-plugin.ini").read_bytes():
         raise ValueError("native-plugin.ini does not reference the packaged DLL")
     check_dll(dll)
@@ -76,7 +76,9 @@ def verify(path: Path, members: dict[str, bytes] | None = None) -> None:
                 if archive.read(name) != content:
                     raise ValueError(f"packaged file differs from source: {name}")
         json.loads(archive.read("autorun/mod.json"))
-        json.loads(archive.read("autorun/extended.mod.json"))
+        extension = json.loads(archive.read("autorun/extended.mod.json"))
+        if extension.get("enabled") is not True:
+            raise ValueError("the packaged mod must start enabled")
     print(f"Verified standalone mod ZIP: {path}")
 
 

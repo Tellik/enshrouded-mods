@@ -1,4 +1,4 @@
-# Autorun v0.3.0 installation guide
+# Autorun v0.3.1 installation guide
 
 Autorun is a **client-only** mod for Enshrouded Steam build `26082781`.
 Install it on the PC where you play, whether you use single-player or join a
@@ -7,9 +7,9 @@ unsupported game executable or ShroudForge ABI.
 
 ## Download
 
-- [Autorun v0.3.0 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.0): download `autorun-0.3.0.zip`.
+- [Autorun v0.3.1 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.1): download `autorun-0.3.1.zip`.
 - If Autorun is your only mod, use the [official ShroudForge 1.7.6 dev ZIP](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.6-dev.40026840919), the loader used in the verified Autorun tests.
-- If you also use Free Airborne Architect, use its [patched ShroudForge 1.7.7 dev ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0) on the same client. Autorun 0.3.0 has not had a separate gameplay check with that loader.
+- If you also use Free Airborne Architect, use its [patched ShroudForge 1.7.7 dev ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/airborne-architect-free-v0.2.0) on the same client. Autorun has not had a separate gameplay check with that loader.
 
 Download the named ZIP assets, not GitHub's generated source archives. The
 Autorun ZIP does not include ShroudForge.
@@ -21,14 +21,14 @@ for ShroudForge placement, Proton launch options, and updates. Extract the
 Autorun ZIP inside the client's `mods` folder. Confirm
 `mods/autorun/mod.json` and `mods/autorun/bin/autorun.dll` exist.
 
-The package is **disabled by default**. While the game is closed, set
-`"enabled": true` in `mods/autorun/extended.mod.json`, or enable Autorun in
-the ShroudForge Modloader and restart the game so its native DLL loads. The
-package defaults to **F8** for toggle and **S** for cancel. World Editor also
-uses F8; disable World Editor or change Autorun's toggle key. You can edit
+Version 0.3.1 defaults to **enabled**; the older v0.3.0 ZIP defaults to
+disabled. The package defaults
+to **F8** for toggle and **S** for cancel. World Editor also uses F8; disable
+World Editor or change Autorun's toggle key. You can edit
 `settings.toggleAutorun.value` in `extended.mod.json` while the game is
-closed. For example, `"SDL:63"` selects F6. Preserve this file before an
-update so your enabled state and custom keybind are not reset.
+closed. For example, `"SDL:63"` selects F6. Before updating, use the
+shared guide's configuration-preserving installer or save and restore
+`extended.mod.json` so your keybind and enabled state are not reset.
 
 On Proton, if the Modloader UI cannot start without WebView2, enable Autorun
 through `extended.mod.json` while the game is closed. The shared guide gives

@@ -405,7 +405,7 @@ DWORD WINAPI worker(void*) {
     const auto session = reinterpret_cast<SessionIdFn>(GetProcAddress(kfc, "KfcRuntimeWorldSessionId"));
     const auto context = reinterpret_cast<ContextActiveFn>(GetProcAddress(kfc, "KfcRuntimeWorldContextActive"));
     if (!abi || abi() != 12 || !session || !context) {
-        log(root, "Required stock ABI-12 world API unavailable; plugin is inactive");
+        log(root, "Required ABI-12 world API unavailable; plugin is inactive");
         return 0;
     }
     session_id.store(session, std::memory_order_release);
