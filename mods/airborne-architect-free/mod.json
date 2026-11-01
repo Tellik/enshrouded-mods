@@ -2,7 +2,7 @@
   "$schema": "../../packages/manifest/manifest.schema.json",
   "id": "airborne-architect-free",
   "name": "Free Airborne Architect",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Makes Airborne Architect cost zero skill points and reachable from a free Root node.",
   "authors": ["Tellik"],
   "license": "MIT",

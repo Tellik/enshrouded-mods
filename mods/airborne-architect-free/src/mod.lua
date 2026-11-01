@@ -17,7 +17,10 @@ local link_id = 2687780846
 
 local resource = resources[1]
 local tree = resource.data
-assert(tree and type(tree.nodes) == "table" and type(tree.links) == "table",
+local function is_sequence(value)
+    return type(value) == "table" or type(value) == "userdata"
+end
+assert(tree and is_sequence(tree.nodes) and is_sequence(tree.links),
     "Unexpected skill-tree layout")
 
 local skill, root
@@ -33,10 +36,10 @@ end
 assert(skill and skill.name and skill.name.value == skill_name_id and
     (skill.type == "ActiveSkill" or skill.type == 2) and
     (skill.costs == 3 or skill.costs == 0) and
-    type(skill.incomingLinks) == "table", "Airborne Architect asset changed")
+    is_sequence(skill.incomingLinks), "Airborne Architect asset changed")
 assert(root and root.name and root.name.value == root_name_id and
     (root.type == "Root" or root.type == 0) and root.costs == 0 and
-    type(root.outgoingLinks) == "table", "Expected free Root node changed")
+    is_sequence(root.outgoingLinks), "Expected free Root node changed")
 
 local edge, reserved_id
 for _, link in ipairs(tree.links) do
@@ -63,6 +66,15 @@ local function contains_link(list, id)
     return found
 end
 
+-- The loader exposes game arrays as fixed-size userdata. Build replacement
+-- arrays for appended links; assigning at #array + 1 is out of bounds.
+local function with_appended(array, value)
+    local result = {}
+    for i = 1, #array do result[i] = array[i] end
+    result[#result + 1] = value
+    return result
+end
+
 if edge then
     assert(edge.id and edge.isBidirectional == false and
         contains_link(root.outgoingLinks, edge.id.value) and
@@ -72,14 +84,14 @@ else
     assert(not contains_link(root.outgoingLinks, link_id) and
         not contains_link(skill.incomingLinks, link_id),
         "Reserved link ID is already referenced")
-    tree.links[#tree.links + 1] = {
+    tree.links = with_appended(tree.links, {
         id = {value = link_id},
         sourceNode = {value = root_id},
         targetNode = {value = skill_id},
         isBidirectional = false,
-    }
-    root.outgoingLinks[#root.outgoingLinks + 1] = {value = link_id}
-    skill.incomingLinks[#skill.incomingLinks + 1] = {value = link_id}
+    })
+    root.outgoingLinks = with_appended(root.outgoingLinks, {value = link_id})
+    skill.incomingLinks = with_appended(skill.incomingLinks, {value = link_id})
 end
 
 skill.costs = 0

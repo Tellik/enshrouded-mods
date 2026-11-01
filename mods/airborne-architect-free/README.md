@@ -1,4 +1,4 @@
-# Free Airborne Architect 0.1.0
+# Free Airborne Architect 0.1.1
 
 This ShroudForge mod makes **Airborne Architect** cost **0 skill points**. It
 also adds a direct link from the nearest free Root node so the skill is
@@ -56,3 +56,6 @@ the skill's `costs` field. Re-running the patch is idempotent. The source is an
 independent implementation of the behavior described on the [Zero Cost Build
 Camera Nexus page](https://www.nexusmods.com/enshrouded/mods/177); it does not
 include any files or assets from that mod.
+
+Version 0.1.1 fixes startup failure on ShroudForge's userdata-backed game
+arrays. Version 0.1.0 did not apply the patch.
