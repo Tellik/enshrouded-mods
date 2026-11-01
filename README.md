@@ -31,15 +31,12 @@ present in v0.2.0.
 Use the ZIP assets, not GitHub's automatically generated source archives.
 The Autorun ZIP contains only the mod; ShroudForge is a separate download.
 
-## Install the files (Windows and Linux/Proton)
+## Install
 
-1. Close Enshrouded. Extract the ShroudForge ZIP into the game directory that
-   contains `enshrouded.exe`. The three DLLs, `shroudforge` folder, and `mods`
-   folder from the ZIP must sit beside the executable.
-2. Extract the Autorun ZIP **inside** that `mods` folder. Check that the result
-   is `Enshrouded/mods/autorun/mod.json` and
-   `Enshrouded/mods/autorun/bin/autorun.dll`. Do not leave the ZIP itself in
-   `mods` or add an extra `autorun` folder level.
+Follow the [shared installation guide](https://github.com/Tellik/enshrouded-mods/blob/main/docs/install-mods.md)
+for ShroudForge and mod file placement, Proton launch options, and updates.
+Install Autorun on the **client** where you play. Its native plugin should be
+at `mods/autorun/bin/autorun.dll`. No server installation is needed.
 
 If upgrading from v0.2.0, save your `mods/autorun/extended.mod.json` settings
 before extracting the new ZIP. The packaged settings default to disabled with
@@ -62,14 +59,7 @@ gameplay is not yet verified; please report the result if you test it.
 
 ### Linux / Proton
 
-These steps reproduce the simplest tested setup without WebView2. In Steam's
-Enshrouded **Launch Options**, enter:
-
-```text
-WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%
-```
-
-Before the first launch, while the game is closed:
+For the tested setup without WebView2, while the game is closed:
 
 1. Open `shroudforge/config/modloader-config.json`. Under `modules`, set
    `debugConsole.enabled` and `modloaderUi.enabled` to `false`. This avoids
