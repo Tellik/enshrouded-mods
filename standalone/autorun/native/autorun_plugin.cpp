@@ -48,12 +48,11 @@ std::atomic<std::uint64_t> hook_hits{}, local_hits{}, writes{};
 std::atomic<int> stop_reason{};
 HMODULE plugin_module{};
 
-enum StopReason { None, Toggle, Backward, Focus, Session, Expired, InputChanged, SettingsChanged };
+enum StopReason { None, Toggle, Backward, Session, Expired, InputChanged, SettingsChanged };
 const char* reason_name(int value) {
     switch (value) {
     case Toggle: return "toggle key";
     case Backward: return "backward input";
-    case Focus: return "game lost focus";
     case Session: return "world session changed";
     case Expired: return "native deadline expired";
     case InputChanged: return "observed input changed";
@@ -141,7 +140,7 @@ void __cdecl on_movement_input(void* input) {
     if (!session_fn || !context_fn) return;
     const auto now = GetTickCount64();
     const auto session = session_fn();
-    if (session && context_fn() && foreground_game()) observe_input(input, session, now);
+    if (session && context_fn()) observe_input(input, session, now);
     if (!active.load(std::memory_order_acquire)) return;
     hook_hits.fetch_add(1, std::memory_order_relaxed);
     last_hook_ms.store(now, std::memory_order_release);
@@ -149,7 +148,6 @@ void __cdecl on_movement_input(void* input) {
         stop(Session, true);
         return;
     }
-    if (!foreground_game()) { stop(Focus, true); return; }
     if (now > deadline_ms.load(std::memory_order_acquire)) { stop(Expired, true); return; }
     if (input_snapshot(session, now).stable_input != input) return;
     local_hits.fetch_add(1, std::memory_order_relaxed);
@@ -448,7 +446,8 @@ DWORD WINAPI worker(void*) {
     std::optional<Settings> settings;
     std::uint64_t config_at{}, report_at{}, previous_session{}, previous_worker_at{};
     std::uint64_t idle_report_at{}, observation_report_at{}, previous_replacements{};
-    bool previous_toggle{}, previous_cancel{}, reported_invalid{};
+    std::uint64_t focus_grace_until{};
+    bool previous_toggle{}, previous_cancel{}, reported_invalid{}, previous_foreground{};
     unsigned reports{};
     while (true) {
         const auto now = GetTickCount64();
@@ -489,12 +488,27 @@ DWORD WINAPI worker(void*) {
         }
         const bool foreground = foreground_game();
         const bool world_context = context();
-        if (!foreground || !current || !world_context) stop(foreground ? Session : Focus);
-        if (active.load(std::memory_order_acquire)) {
-            const auto snapshot = input_snapshot(current, now);
-            if (now > last_hook_ms.load(std::memory_order_acquire) + AutorunInput::MaximumAgeMs ||
+        if (foreground != previous_foreground) {
+            if (foreground) focus_grace_until = now + 2000;
+            if (active.load(std::memory_order_acquire))
+                log(root, std::string("Focus ") + (foreground ? "regained" : "lost") +
+                    "; Autorun remains on");
+            previous_foreground = foreground;
+        }
+        if (!current || !world_context) stop(Session);
+        std::string expiry_detail;
+        if (active.load(std::memory_order_acquire) && foreground && now >= focus_grace_until) {
+            const auto checked_at = GetTickCount64();
+            const auto snapshot = input_snapshot(current, checked_at);
+            const auto hook_at = last_hook_ms.load(std::memory_order_acquire);
+            const auto hook_idle_ms = checked_at >= hook_at ? checked_at - hook_at : 0;
+            if (hook_idle_ms > AutorunInput::MaximumAgeMs ||
                 (snapshot.readiness != AutorunInput::Readiness::Busy &&
-                 snapshot.readiness != AutorunInput::Readiness::Ready)) stop(Expired);
+                 snapshot.readiness != AutorunInput::Readiness::Ready)) {
+                expiry_detail = " checked_hook_idle_ms=" + std::to_string(hook_idle_ms) +
+                    " checked_input=" + input_status(snapshot);
+                stop(Expired);
+            }
         }
         if (settings && settings->enabled && foreground && current && world_context) {
             const bool cancel = binding_down(settings->cancel);
@@ -531,7 +545,8 @@ DWORD WINAPI worker(void*) {
         if (const auto reason = stop_reason.exchange(None, std::memory_order_acq_rel); reason) {
             log(root, std::string("OFF: ") + reason_name(reason & ~NativeStopBit) +
                 " source=" + (reason & NativeStopBit ? "hook" : "worker") +
-                diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
+                diagnostic_state(now, current, world_context, foreground, worker_gap_ms) +
+                ((reason & ~NativeStopBit) == Expired && !(reason & NativeStopBit) ? expiry_detail : ""));
         }
         if (active.load(std::memory_order_acquire) && now >= report_at) {
             report_at = now + (reports < 30 ? 1000 : 10000);

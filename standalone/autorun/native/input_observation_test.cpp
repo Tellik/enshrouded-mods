@@ -27,6 +27,12 @@ int main() {
     qualify(observation, &original, 1, 1000, InitialObservationMs, InitialObservationHits);
     require(observation.snapshot(1, 1500).stable_input == &original,
             "initial input did not qualify");
+    require(observation.snapshot(1, 1499).stable_input == &original,
+            "a callback after the worker's timestamp must not expire input");
+    require(!observation.observe(&original, 1, 1499),
+            "an out-of-order callback must not replace the same input");
+    require(observation.snapshot(1, 1500).stable_input == &original,
+            "an out-of-order callback must not reset a qualified input");
     require(observation.observe(&replacement, 1, 1510), "replacement was not detected");
     require(observation.snapshot(1, 1510).readiness == Readiness::Revalidating,
             "replacement must immediately disable movement");

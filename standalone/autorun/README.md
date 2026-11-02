@@ -125,8 +125,10 @@ native hook still refuses an unsupported game build or ABI.
 
 Wait for the world to load in a safe open area, then tap the toggle. Forward
 movement uses the game's ordinary input speed and preserves left/right
-steering. Backward movement or loss of game focus stops it. Turn it off before
-opening menus. Menu, disconnect, and native Windows gameplay still need
+steering. Backward movement stops it. Losing game focus leaves Autorun on; the
+toggle and cancel keys are only read while the game is focused. Turn Autorun
+off before switching apps or opening menus. Menu, disconnect, and native
+Windows gameplay still need
 dedicated checks. Another player was online during a dedicated-server test,
 but their view of the movement was not checked. The plugin does
 not force sprint or the game's slower Walk action.

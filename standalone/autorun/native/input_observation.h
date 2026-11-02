@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 
 namespace AutorunInput {
@@ -37,7 +38,10 @@ public:
             return replaced;
         }
         // A paused producer cannot count old samples toward a new qualification.
-        if (now < last_ms_ || now - last_ms_ > MaximumAgeMs) {
+        // Callbacks from different threads can arrive in timestamp order but
+        // acquire this lock in the opposite order. Do not reset a valid source.
+        if (now < last_ms_) return false;
+        if (now - last_ms_ > MaximumAgeMs) {
             first_ms_ = last_ms_ = now;
             hits_ = 1;
             return false;
@@ -56,12 +60,11 @@ public:
             return result;
         }
         result.hits = hits_;
-        if (now >= first_ms_) result.age_ms = now - first_ms_;
-        if (now < last_ms_) {
-            result.readiness = Readiness::Stale;
-            return result;
-        }
-        result.idle_ms = now - last_ms_;
+        // A caller may capture now just before a callback updates last_ms_;
+        // that fresh callback means the input is ready, not stale.
+        const auto sampled_now = std::max(now, last_ms_);
+        result.age_ms = sampled_now - first_ms_;
+        result.idle_ms = sampled_now - last_ms_;
         if (result.idle_ms > MaximumAgeMs) {
             result.readiness = Readiness::Stale;
             return result;
