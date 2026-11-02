@@ -1,0 +1,44 @@
+{
+  "$schema": "https://bonsaibauer.github.io/shroudforge/schemas/extended.mod.schema.json",
+  "schemaVersion": 1,
+  "enabled": true,
+  "targets": ["client"],
+  "launcher": "SF",
+  "settings": {
+    "flameShrinesAndSanctums": {
+      "value": true,
+      "label": "Flame Shrines and Sanctums",
+      "description": "Allow map travel to revealed Flame Shrine and Flame Sanctum markers. The game uses one marker type for both.",
+      "control": "toggle",
+      "applyAt": "restart",
+      "restartRequired": true,
+      "assetPreparation": true
+    },
+    "allowIntoShroud": {
+      "value": false,
+      "label": "Allow destinations in the Shroud",
+      "description": "Required before Shroud destination categories such as Gem Forges can be enabled.",
+      "control": "toggle",
+      "applyAt": "restart",
+      "restartRequired": true,
+      "assetPreparation": true
+    },
+    "gemForges": {
+      "value": false,
+      "label": "Gem Forges",
+      "description": "Allow map travel to revealed Gem Forge markers when Shroud destinations are enabled.",
+      "control": "toggle",
+      "enabledWhen": {"setting": "allowIntoShroud", "equals": true},
+      "applyAt": "restart",
+      "restartRequired": true,
+      "assetPreparation": true
+    }
+  },
+  "groups": [
+    {
+      "label": "Map destinations",
+      "description": "Travel settings are applied at game startup. Selected markers are hidden by the game's fog until the map area is uncovered.",
+      "settings": ["flameShrinesAndSanctums", "allowIntoShroud", "gemForges"]
+    }
+  ]
+}
