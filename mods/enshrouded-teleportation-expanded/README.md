@@ -23,11 +23,20 @@ entry count, and two marker IDs are checked before any asset is changed. In an
 isolated copy, the patched ShroudForge loader completed its pregame pass and
 committed one changed resource. Reading that resource back showed only the
 two intended fields changed on the enabled marker types, both with defaults
-and with Gem Forges enabled. Game startup, actual travel arrival, fog-only
-discovery, Shroud entry, hosted co-op, and dedicated-server travel **have not
-yet been tested**. The asset pass does not establish that the game or server
-will accept a travel request to these POIs. This is a development prototype,
-not a release.
+and with Gem Forges enabled.
+
+On November 1, 2026, the default configuration was installed in the live
+client. ShroudForge prepared the assets successfully, and readback showed
+exactly the two intended field changes on the Shrine/Sanctum marker type.
+The tester then traveled to an uncovered Flame Shrine and Flame Sanctum in a
+local single-player world and reported safe arrival at both. The game log
+records two player teleports and normal session shutdown; POI identification
+comes from the tester because the log does not name the destinations.
+
+Fog-only discovery, Shroud entry, hosted co-op, and dedicated-server travel
+**have not yet been tested**. The initial single-player result does not
+establish that a server will accept travel or that uncovering fog alone reveals
+a destination. This is a development prototype, not a release.
 
 ## Staged installation for a controlled test
 
