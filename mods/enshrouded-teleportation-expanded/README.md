@@ -53,11 +53,14 @@ types out of that list; readback confirms 36 filterable types and 21 travel
 types. These are asset checks, not gameplay or multiplayer proof.
 
 The earlier Shrine/Sanctum prototype worked in single player and with one
-modded client on an unmodded dedicated server. Version 0.3.1 changes the
-selection and has not yet been tested in game. Fog discovery, Shroud arrival,
-two-client behavior, and per-player discovery still need testing. The dedicated
-server has no client map-marker registry, so each player wanting expanded
-markers installs the mod on their own client.
+modded client on an unmodded dedicated server. In a 0.3.1 single-player test,
+the world loaded and the player reported successful travel to multiple enabled
+locations, including a Hollow Hall and a Gem Forge. The game log records six
+travel events and a normal shutdown. The player also confirmed that an
+undiscovered destination could not be selected. The Shroud-off rule,
+two-client behavior, and per-player discovery still need gameplay testing.
+The dedicated server has no client map-marker registry, so each player wanting
+expanded markers installs the mod on their own client.
 
 ## Install and first test
 
