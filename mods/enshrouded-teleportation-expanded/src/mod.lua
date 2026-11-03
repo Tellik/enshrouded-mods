@@ -1,18 +1,8 @@
--- Client map-marker registry patch checked on builds 26082781 and 26320373.
--- This does not create teleport events or change the server's travel rules.
+-- Per-location map travel for Enshrouded client build 26404966.
+-- The game still handles discovery, travel, arrival, and server acceptance.
 assert(loader.features.patch, "Teleportation Expanded needs game.assets.write")
-
-local registry_type = assert(game.types.get("keen::MapMarkerRegistryResource"),
-    "MapMarkerRegistryResource is unavailable")
-local resources = game.assets.get_resources_by_type(registry_type)
-assert(#resources == 1, "Expected one map-marker registry")
-local resource = resources[1]
-assert(resource.guid == "d165e819-f603-42a3-8f7d-827e9e8cb97a",
-    "Map-marker registry identity changed")
-
-local data = resource.data
-assert(data and data.mapMarkers and data.mapMarkers.values and
-    #data.mapMarkers.values == 49, "Map-marker registry layout changed")
+local catalog = require("locations")
+assert(catalog.build == 26404966, "Unexpected Teleportation Expanded catalog")
 
 local function setting(key, fallback)
     local value = shroudforge.settings.get(key, fallback)
@@ -20,46 +10,156 @@ local function setting(key, fallback)
     return value
 end
 
-local destinations = {
-    -- Both Flame Shrines and Flame Sanctums use mapmarker_flame_essence.
-    [2068618774] = {
-        enabled = setting("flameShrinesAndSanctums", true),
-        name = "Flame Shrines and Sanctums",
-    },
-    -- The game labels the Gem Forge map-marker texture mapmarker_shroudforge.
-    [4099254117] = {
-        enabled = setting("allowIntoShroud", false) and setting("gemForges", false),
-        name = "Gem Forges",
-    },
-}
+local allow_into_shroud = setting("allowIntoShroud", false)
+local registry_type = assert(game.types.get("keen::MapMarkerRegistryResource"))
+local registries = game.assets.get_resources_by_type(registry_type)
+assert(#registries == 1, "Expected one map-marker registry")
+local registry = registries[1]
+assert(registry.guid == "d165e819-f603-42a3-8f7d-827e9e8cb97a",
+    "Map-marker registry identity changed")
+local markers = registry.data
+local marker_map = markers.mapMarkers
+assert(marker_map and #marker_map.entries == 64 and
+    #marker_map.keys == 49 and #marker_map.values == 49,
+    "Map-marker registry layout changed")
 
-local found = {}
-for _, marker in ipairs(data.mapMarkers.values) do
-    local id = marker.markerId and marker.markerId.value
-    local selected = destinations[id]
-    if selected then
-        assert(not found[id], "Duplicate map-marker type " .. tostring(id))
-        assert(marker.isFastTravelDestination == false or marker.isFastTravelDestination == true,
-            "Unexpected fast-travel field")
-        assert(marker.showAboveFogOfWar == false or marker.showAboveFogOfWar == true,
-            "Unexpected fog field")
-        found[id] = marker
+-- The registry is a 64-bucket keyed map. Keys, values, and bucket offsets
+-- must all be updated together so the game can find the new marker types.
+local function check_marker_map()
+    local expected = 0
+    for bucket, entry in ipairs(marker_map.entries) do
+        assert(entry.start == expected, "Map-marker bucket offset changed")
+        for i = entry.start + 1, entry.start + entry.count do
+            local id = marker_map.keys[i].value
+            assert(id == marker_map.values[i].markerId.value,
+                "Map-marker key/value mismatch")
+            assert(id % #marker_map.entries == bucket - 1,
+                "Map-marker hash bucket changed")
+        end
+        expected = expected + entry.count
+    end
+    assert(expected == #marker_map.values, "Map-marker count mismatch")
+end
+check_marker_map()
+
+local scene_type = assert(game.types.get("keen::SceneEntityChunkResource"))
+local scene = assert(game.assets.get_resource("509feadb-4c60-425f-9c7c-deeefd9b6920", scene_type, 1600),
+    "Map-label scene chunk missing")
+local chunk = scene.data
+assert(#chunk.entities == 1300 and #chunk.templates == 618 and
+    #chunk.templatesDoNotSave == 10,
+    "Map-label scene layout changed; catalog needs regeneration")
+
+local collection_type = assert(game.types.get("keen::ecs::TemplateCollectionResource"))
+local collections = game.assets.get_resources_by_type(collection_type)
+assert(#collections == 1 and collections[1].guid == "377f61dc-c7b8-4e4f-830f-7d2c3e8b7fd8",
+    "Template collection identity changed")
+local collection = collections[1]
+local all_templates = collection.data
+assert(#all_templates.templates == 12269, "Template collection layout changed")
+
+local template_type = assert(game.types.get("keen::ecs::TemplateResource"))
+local enabled = {}
+local seen_entities = {}
+for _, location in ipairs(catalog.locations) do
+    assert(not seen_entities[location.entity], "Duplicate catalog scene entity")
+    seen_entities[location.entity] = true
+    local entity = chunk.entities[location.entity + 1]
+    assert(entity and chunk.templates[entity.templateIndex + 1] == location.template and
+        entity.transform.positionX1 == location.x and
+        entity.transform.positionY1 == location.y and
+        entity.transform.positionZ1 == location.z,
+        "Map-label scene changed at " .. location.key)
+    local selected = setting(location.key, location.default)
+    if selected and (location.default or allow_into_shroud) then
+        local source = assert(game.assets.get_resource(location.template, template_type),
+            "POI template missing: " .. location.key)
+        local source_marker = false
+        for _, component in ipairs(source.data.components) do
+            if component.type == "keen::ecs::MapMarker" then
+                assert(component.value.markerType == location.markerType,
+                    "POI marker type changed: " .. location.key)
+                source_marker = true
+            end
+        end
+        assert(source_marker, "POI marker missing: " .. location.key)
+        table.insert(enabled, { location = location, source = source })
     end
 end
-for id in pairs(destinations) do
-    assert(found[id], "Missing map-marker type " .. tostring(id))
+assert(#catalog.locations == 617, "Location catalog count changed")
+
+local created_types = {}
+local function create_travel_marker(source_type)
+    if created_types[source_type] then return end
+    local info = assert(catalog.markerTypes[source_type], "Unknown source marker type")
+    local source_marker, source_key
+    for i, key in ipairs(marker_map.keys) do
+        if key.value == info.sourceId then
+            source_marker = marker_map.values[i]
+            source_key = key
+            break
+        end
+    end
+    assert(source_marker and source_marker.isFastTravelDestination == false and
+        source_marker.showAboveFogOfWar == true,
+        "Source marker type changed")
+    local bucket = info.travelId % #marker_map.entries + 1
+    local entry = marker_map.entries[bucket]
+    local position = entry.start + entry.count + 1
+    table.insert(marker_map.keys, position, source_key)
+    marker_map.keys[position].value = info.travelId
+    table.insert(marker_map.values, position, source_marker)
+    local travel_marker = marker_map.values[position]
+    travel_marker.markerId.value = info.travelId
+    travel_marker.isFastTravelDestination = true
+    travel_marker.showAboveFogOfWar = false
+    entry.count = entry.count + 1
+    for i = bucket + 1, #marker_map.entries do
+        marker_map.entries[i].start = marker_map.entries[i].start + 1
+    end
+    created_types[source_type] = true
 end
 
-local count = 0
-for id, selected in pairs(destinations) do
-    local marker = found[id]
-    marker.isFastTravelDestination = selected.enabled
-    -- The stock type advertises these POIs above the fog. Hide the selected
-    -- destinations there so an unrevealed icon cannot become a travel button.
-    marker.showAboveFogOfWar = not selected.enabled
-    if selected.enabled then count = count + 1 end
+for _, item in ipairs(enabled) do
+    local location = item.location
+    create_travel_marker(location.markerType)
+    local info = catalog.markerTypes[location.markerType]
+    local clone = game.assets.create_resource(item.source.data, template_type, location.clone, 0)
+    local cloned = clone.data
+    cloned.name = "ETE_" .. location.key
+    local found = false
+    for _, component in ipairs(cloned.components) do
+        if component.type == "keen::ecs::MapMarker" then
+            assert(component.value.markerType == location.markerType)
+            component.value.markerType = info.clone
+            found = true
+        end
+    end
+    assert(found, "Cloned POI marker missing")
+    clone.data = cloned
+
+    local position = 1
+    while position <= #all_templates.templates and
+        all_templates.templates[position] < location.clone do
+        position = position + 1
+    end
+    assert(all_templates.templates[position] ~= location.clone,
+        "Cloned POI template already exists")
+    table.insert(all_templates.templates, position, location.clone)
+
+    local entity = chunk.entities[location.entity + 1]
+    entity.templateIndex = #chunk.templates
+    table.insert(chunk.templates, location.clone)
 end
 
-resource.data = data
-shroudforge.log.info("Teleportation Expanded: enabled " .. count ..
-    " additional map-marker categories")
+if #enabled > 0 then
+    check_marker_map()
+    while #chunk.templatesDoNotSave < math.ceil(#chunk.templates / 64) do
+        table.insert(chunk.templatesDoNotSave, 0)
+    end
+    registry.data = markers
+    collection.data = all_templates
+    scene.data = chunk
+end
+shroudforge.log.info("Teleportation Expanded: enabled " .. #enabled ..
+    " individual POIs across " .. #catalog.locations .. " configured locations")

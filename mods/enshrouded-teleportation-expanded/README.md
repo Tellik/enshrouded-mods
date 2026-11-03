@@ -1,90 +1,88 @@
-# Enshrouded Teleportation Expanded 0.1.0 prototype
+# Enshrouded Teleportation Expanded 0.2.0
 
-This experimental ShroudForge asset mod marks Flame Shrine and Flame Sanctum
-map markers as fast-travel destinations. The two POIs use the same marker type in the
-current game data, so they share one switch. Gem Forge travel is optional and
-requires both **Allow destinations in the Shroud** and **Gem Forges** to be on.
-The packaged defaults enable Flame Shrines and Sanctums, and leave Shroud
-destinations and Gem Forges off.
+This ShroudForge client mod adds individual map-travel switches for **617 placed
+points of interest** in Enshrouded build **26404966**. They are grouped into 18
+categories in `extended.mod.json`. The 63 Flame Shrines and Flame Sanctums are
+on by default. All other locations and **Allow additional POIs, including
+Shroud destinations** are off by default. Existing Ancient Spires and placed
+Flame Altars keep the game's normal behavior.
 
-The mod changes the game's map-marker registry before the client starts. For
-enabled categories, it hides their markers above unexplored fog. The game
-also has a separate marker-visibility state, which starts hidden on the
-inspected Shrine and Gem Forge templates. Whether uncovering fog alone makes
-the marker visible still needs a live check. The mod does not uncover the map,
-add POIs, move a player directly, or change the game's travel animation. It
-does not alter any world or character save.
+The map label at each selected location gets a travel-enabled marker type. The
+mod keeps the original label identity and coordinates, and sets its marker not
+to appear above unexplored fog. It does not uncover the map, bypass the game's
+discovery and travel checks, move the player directly, or edit world saves.
 
-## Status
+## Settings
 
-The mod source and configuration have been checked against Enshrouded client
-builds **26082781** and **26320373** and their matching game resources. The
-exact registry GUID, entry count, and two marker IDs are checked before any
-asset is changed. In an isolated copy, the patched ShroudForge loader completed
-its pregame pass and
-committed one changed resource. Reading that resource back showed only the
-two intended fields changed on the enabled marker types, both with defaults
-and with Gem Forges enabled.
+Open `mods/enshrouded-teleportation-expanded/extended.mod.json` beside
+`enshrouded.exe`. Each location has one `poi_...` setting with a name, category,
+and world coordinates. Set its `value` to `true` or `false`. Coordinates
+disambiguate locations with the same map name. A restart and ShroudForge asset
+preparation are required for changes to take effect.
 
-On November 1, 2026, the default configuration was installed in the live
-client. ShroudForge prepared the assets successfully, and readback showed
-exactly the two intended field changes on the Shrine/Sanctum marker type.
-The tester then traveled to an uncovered Flame Shrine and Flame Sanctum in a
-local single-player world and reported safe arrival at both. The game log
-records two player teleports and normal session shutdown; POI identification
-comes from the tester because the log does not name the destinations.
+When upgrading from 0.1.x, `tools/migrate_config.py` carries the old Shrine,
+Gem Forge, Shroud, and mod-enabled values into the new per-location config.
+The ordinary mod installer preserves the old file as-is, so run the migration
+before replacing that configuration. The previous mod folder is saved by the
+installer under `shroudforge/backups/manual-mod-installs/`.
 
-On November 2, 2026, the tester joined an unmodded dedicated server with the
-modded client and reported safe arrival after map travel to both a Flame Shrine
-and a Flame Sanctum. The client log confirms an online session and map use but
-does not name the destinations or record the server's travel decision; the
-arrival results come from the tester. This supports client-only installation
-for these two destinations in the tested dedicated-server setup. On the
-updated client build 26320373, comparing the clean and prepared marker registry
-again showed exactly the two intended Shrine/Sanctum field changes.
+The global `allowIntoShroud` switch is required for **all optional locations**.
+The client map-label assets do not reliably say which optional locations are
+inside Shroud, so gating the whole optional set prevents those destinations
+from being enabled inadvertently. To enable a Gem Forge, set both
+`allowIntoShroud` and that Gem Forge's individual `poi_...` value to `true`.
+Turning on the global switch alone enables no optional locations.
 
-Fog-only discovery, per-player discovery behavior, Shroud entry, Gem Forge
-travel, hosted co-op, and a two-client dedicated-server session **have not yet
-been tested**. This is a development prototype, not a release.
+Some optional map-label positions may be hazardous arrival points, including
+Shroud Roots, caves, and dungeons. Test only locations you intend to use. The
+client's default discovery, fog, travel, and multiplayer rules still determine
+whether an enabled map label appears and can be used.
 
-## Staged installation for a controlled test
+## Build and test status
 
-1. Close Enshrouded and back up the local world to be used for testing.
-2. Use a ShroudForge build that can commit pregame asset patches under your
-   platform. The patched 1.7.7 development loader in this repository includes
-   the Proton/Wine asset-reader fix.
-3. Copy this folder into `mods/` beside `enshrouded.exe`, so the path ends in
-   `mods/enshrouded-teleportation-expanded/src/mod.lua`.
-4. Start a disposable single-player world. Confirm the ShroudForge log says
-   `Teleportation Expanded: enabled 1 additional map-marker categories`.
-5. Compare a Shrine or Sanctum still under fog with one whose area is
-   uncovered. Check both whether the uncovered marker appears immediately and
-   whether it offers map travel. Travel to it and record the arrival position
-   and whether movement, combat, and saving continue normally.
-6. For broader multiplayer coverage, test a player-hosted world and a
-   disposable dedicated world with two clients. Install the mod on each client
-   that should have additional destinations. Check that each player can travel
-   only to POIs uncovered on that player's map, and record both arrivals.
-7. Only after the default path works, enable both Shroud switches and try a
-   Gem Forge in a disposable world. Check arrival, Shroud timer, and return
-   travel separately.
+This location catalog is tied to client build **26404966**. The mod checks the
+registry, map-label scene, template collection, and every location's original
+template and position before changing assets. If the game data changes, it
+fails during preparation and needs a regenerated catalog.
 
-The dedicated server's resource container has no map-marker registry resource;
-this prototype therefore runs on clients. Travel to the two default
-destination types succeeded during the initial test with an unmodded dedicated
-server. Other multiplayer cases still need the controlled checks above.
+In a disposable client copy, ShroudForge successfully prepared the default 63
+locations, one additional Gem Forge, and all 617 locations. Asset readback
+confirmed that only the selected scene entities changed, their new templates
+were added to the collection, original templates and marker types stayed
+unchanged, and the new travel marker IDs were valid in the registry. This is
+asset validation, not proof of arrival or server acceptance.
 
-To disable the prototype, set `"enabled": false` in `extended.mod.json` and
-restart the client. Changes to any travel setting also need a restart.
+The earlier 0.1.0 prototype was tested in game: a player reached a Flame Shrine
+and Flame Sanctum safely in single player and with one modded client on an
+unmodded dedicated server. Version 0.2.0 changes how individual map labels are
+selected. Its in-game arrival behavior, fog discovery, Shroud travel,
+per-player discovery, and two-client multiplayer behavior still need testing.
 
-## Source evidence
+## Install and first test
 
-The client `MapMarkerRegistryResource` has GUID
-`d165e819-f603-42a3-8f7d-827e9e8cb97a` and 49 marker types in build
-26082781 and 26320373. In the clean game data, `isFastTravelDestination` is
-false for `mapmarker_flame_essence` (type ID `2068618774`) and
-`mapmarker_shroudforge` (type ID `4099254117`). The first type is used by
-`8kMapLabel_general_FlameShrine` and `8kMapLabel_*_FlameTemple_*` templates.
-The second is used by `8kMapLabel_generic_gemForgeStation*` templates. The
-game's existing fast-travel types have the flag set. These are static asset
-observations, not gameplay proof.
+1. Close Enshrouded. Keep the same path:
+   `mods/enshrouded-teleportation-expanded/src/mod.lua` beside `enshrouded.exe`.
+2. Start the game with the ShroudForge loader. Its log should say
+   `Teleportation Expanded: enabled 63 individual POIs across 617 configured locations`
+   for the packaged defaults.
+3. In a disposable world, try an uncovered Flame Shrine and Flame Sanctum.
+   Confirm each offers travel and that the player arrives safely.
+4. If possible, check that a Shrine or Sanctum under unexplored fog cannot be
+   used. Compare two players with different discovery states on a test server.
+5. Only after the default path works, enable the global Shroud switch and one
+   specific Gem Forge. Test arrival, Shroud timer, and return travel.
+
+The dedicated server's resource container does not contain the client map
+marker registry. Each player who wants the expanded destinations should
+install the mod on their client. The server need not run this asset patch for
+the earlier Shrine and Sanctum prototype; version 0.2.0 still needs the
+multiplayer test described above.
+
+## Regenerating after a game update
+
+`tools/generate_locations.py` rebuilds `src/locations.lua` and
+`extended.mod.json` from exports of the client's POI templates, placed map
+labels, marker registry, English localization, and icon resources. Review the
+generated catalog and repeat isolated preparation and in-game tests before
+installing it for a new build. Existing `poi_...` keys are based on map-label
+coordinates; review user settings when game placements change.
