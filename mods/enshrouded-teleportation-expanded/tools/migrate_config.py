@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
-"""Carry user toggle values from an installed 0.1.x or 0.2.x config into 0.2.0."""
+"""Migrate a 0.1.x/0.2.x configuration to the 0.3 category settings."""
 
 import argparse
 import json
 from pathlib import Path
+
+OLD_GROUPS = {
+    "Flame Shrines": "flameShrines", "Flame Sanctums": "flameSanctums",
+    "Gem Forges": "gemForges", "Night Sanctums": "nightSanctums",
+    "Dungeons": "dungeons", "Large Dungeons": "hollowHalls",
+    "Obelisks": "obelisks", "Tombs": "tombs",
+    "Balefire Sites": "balefireSites", "Mines": "mines", "Caves": "caves",
+    "Enemy Camps": "enemyCamps", "Villages": "villagesTowns",
+    "Survivor Camps": "survivorCamps", "Farms": "farms",
+}
 
 
 def boolean(config, key):
@@ -20,23 +30,42 @@ def migrate(old, packaged):
     if not isinstance(old.get("enabled", True), bool):
         raise ValueError("enabled must be a boolean")
     packaged["enabled"] = old.get("enabled", True)
-    locations = packaged["settings"]
-    groups = {group["label"]: group["settings"] for group in packaged["groups"]}
-    for key in locations:
+    settings = packaged["settings"]
+    for key in settings:
         previous = boolean(old, key)
         if previous is not None:
-            locations[key]["value"] = previous
-    old_flame = boolean(old, "flameShrinesAndSanctums")
-    if old_flame is not None:
-        for category in ("Flame Shrines", "Flame Sanctums"):
-            for key in groups[category]:
-                if key not in old.get("settings", {}):
-                    locations[key]["value"] = old_flame
-    old_forges = boolean(old, "gemForges")
-    if old_forges is not None:
-        for key in groups["Gem Forges"]:
-            if key not in old.get("settings", {}):
-                locations[key]["value"] = old_forges
+            settings[key]["value"] = previous
+
+    if any(key.startswith("poi_") for key in old.get("settings", {})):
+        # Replace old per-location defaults with the new category defaults.
+        # A mixed custom group cannot be represented by one switch.
+        for group in old.get("groups", []):
+            label = group.get("label")
+            category = OLD_GROUPS.get(label)
+            if not category:
+                continue
+            values = [boolean(old, key) for key in group["settings"]]
+            expected = label in ("Flame Shrines", "Flame Sanctums")
+            if len(set(values)) > 1:
+                if any(value != expected for value in values):
+                    raise ValueError(f"{label} has mixed custom location values; choose a category value manually")
+            elif values and values[0] != expected:
+                settings[category]["value"] = values[0]
+        vault_group = next((group for group in old.get("groups", [])
+                            if group.get("label") == "Challenge Chambers and Vaults"), None)
+        if vault_group:
+            vault_keys = [key for key in vault_group["settings"]
+                          if old["settings"][key]["label"].startswith("Ancient Vault —")]
+            vault_values = [boolean(old, key) for key in vault_keys]
+            if len(set(vault_values)) > 1:
+                raise ValueError("Ancient Vaults has mixed custom location values; choose a category value manually")
+            if vault_values and vault_values[0]:
+                settings["ancientVaults"]["value"] = True
+    else:
+        old_flame = boolean(old, "flameShrinesAndSanctums")
+        if old_flame is not None:
+            settings["flameShrines"]["value"] = old_flame
+            settings["flameSanctums"]["value"] = old_flame
     return packaged
 
 

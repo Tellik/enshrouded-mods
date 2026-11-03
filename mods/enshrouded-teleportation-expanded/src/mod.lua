@@ -1,4 +1,4 @@
--- Per-location map travel for Enshrouded client build 26404966.
+-- Category-controlled map travel for Enshrouded client build 26404966.
 -- The game still handles discovery, travel, arrival, and server acceptance.
 assert(loader.features.patch, "Teleportation Expanded needs game.assets.write")
 local catalog = require("locations")
@@ -11,6 +11,13 @@ local function setting(key, fallback)
 end
 
 local allow_into_shroud = setting("allowIntoShroud", false)
+local category_enabled = {}
+local category_count = 0
+for key, category in pairs(catalog.categories) do
+    category_enabled[key] = setting(key, category.default)
+    category_count = category_count + 1
+end
+assert(category_count == 16, "POI category catalog changed")
 local registry_type = assert(game.types.get("keen::MapMarkerRegistryResource"))
 local registries = game.assets.get_resources_by_type(registry_type)
 assert(#registries == 1, "Expected one map-marker registry")
@@ -70,8 +77,11 @@ for _, location in ipairs(catalog.locations) do
         entity.transform.positionY1 == location.y and
         entity.transform.positionZ1 == location.z,
         "Map-label scene changed at " .. location.key)
-    local selected = setting(location.key, location.default)
-    if selected and (location.default or allow_into_shroud) then
+    local category = assert(catalog.categories[location.category],
+        "Unknown POI category: " .. location.key)
+    assert(type(location.inShroud) == "boolean", "Missing Shroud classification: " .. location.key)
+    if category_enabled[location.category] and
+        (allow_into_shroud or not location.inShroud) then
         local source = assert(game.assets.get_resource(location.template, template_type),
             "POI template missing: " .. location.key)
         local source_marker = false
@@ -86,7 +96,7 @@ for _, location in ipairs(catalog.locations) do
         table.insert(enabled, { location = location, source = source })
     end
 end
-assert(#catalog.locations == 617, "Location catalog count changed")
+assert(#catalog.locations == 505, "Location catalog count changed")
 
 local created_types = {}
 local function create_travel_marker(source_type)
@@ -162,4 +172,4 @@ if #enabled > 0 then
     scene.data = chunk
 end
 shroudforge.log.info("Teleportation Expanded: enabled " .. #enabled ..
-    " individual POIs across " .. #catalog.locations .. " configured locations")
+    " POIs across " .. #catalog.locations .. " eligible locations")
