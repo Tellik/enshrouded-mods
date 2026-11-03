@@ -1,4 +1,4 @@
--- Client map-marker registry patch for Enshrouded client build 26082781.
+-- Client map-marker registry patch checked on builds 26082781 and 26320373.
 -- This does not create teleport events or change the server's travel rules.
 assert(loader.features.patch, "Teleportation Expanded needs game.assets.write")
 
