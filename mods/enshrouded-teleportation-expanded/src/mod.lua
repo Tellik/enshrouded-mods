@@ -1,4 +1,4 @@
--- Category-controlled map travel for Enshrouded build 26404966.
+-- Category-controlled map travel for client build 26404966 and server build 26404334.
 -- Client and dedicated-server map labels must use the same marker types.
 assert(loader.features.patch, "Teleportation Expanded needs game.assets.write")
 assert(type(loader.is_server) == "boolean", "Unknown game target")
@@ -63,7 +63,7 @@ local scene_type = assert(game.types.get("keen::SceneEntityChunkResource"))
 local scene = assert(game.assets.get_resource("509feadb-4c60-425f-9c7c-deeefd9b6920", scene_type, 1600),
     "Map-label scene chunk missing")
 local chunk = scene.data
-assert(#chunk.entities == 1300 and #chunk.templates == (is_server and 617 or 618) and
+assert(#chunk.entities == 1300 and #chunk.templates == 618 and
     #chunk.templatesDoNotSave == 10,
     "Map-label scene layout changed; catalog needs regeneration")
 
@@ -73,7 +73,7 @@ assert(#collections == 1 and collections[1].guid == "377f61dc-c7b8-4e4f-830f-7d2
     "Template collection identity changed")
 local collection = collections[1]
 local all_templates = collection.data
-assert(#all_templates.templates == (is_server and 12267 or 12269),
+assert(#all_templates.templates == 12269,
     "Template collection layout changed")
 
 local template_type = assert(game.types.get("keen::ecs::TemplateResource"))

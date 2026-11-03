@@ -42,8 +42,8 @@ travel, arrival, and server acceptance.
 
 ## Build and test status
 
-The catalog is tied to client build **26404966** and the tested dedicated-server
-asset layout. It checks the client registry, map-label scenes, template
+The catalog is tied to client build **26404966** and dedicated-server build
+**26404334**. It checks the client registry, map-label scenes, template
 collections, and source POI positions before changing assets. If those change,
 preparation fails and the catalog needs regeneration.
 
@@ -56,10 +56,10 @@ map-filter list from 36 entries to 51. Version 0.3.1 leaves the 15 travel
 types out of that list; readback confirms 36 filterable types and 21 travel
 types. These are asset checks, not gameplay or multiplayer proof.
 
-Version 0.4.0 prepared successfully in isolated client and server copies with
-all switches on. Readback confirmed that the same 505 scene entities point to
-the same new template IDs on both sides. This confirms asset alignment, not
-dedicated-server travel.
+Version 0.4.1 prepares against the current dedicated-server build with all
+switches on. The prior server build 26083076 used a smaller template table;
+the new build matches the client table. Readback confirms that the same 505
+scene entities point to the same new template IDs on both sides.
 
 The earlier Shrine/Sanctum prototype worked in single player and with one
 modded client on an unmodded dedicated server. In a 0.3.1 single-player test,
@@ -67,8 +67,12 @@ the world loaded and the player reported successful travel to multiple enabled
 locations, including a Hollow Hall and a Gem Forge. The game log records six
 travel events and a normal shutdown. The player also confirmed that an
 undiscovered destination could not be selected. On an unmodded dedicated server,
-the 0.3.1 Fast Travel option was missing. The Shroud-off rule, 0.4.0 dedicated
-travel, two-client behavior, and per-player discovery still need gameplay testing.
+the 0.3.1 Fast Travel option was missing. On the remote test server updated to
+dedicated build 26404334 (game revision 1285601), one modded client joined and
+the player confirmed dedicated-server travel worked. Its log recorded arrivals
+at a Small Flint Mine, Former Fort Hope, Old Mistburry Catacombs, and a Gem
+Forge. The Shroud-off rule, two-client behavior, and per-player discovery
+still need gameplay testing.
 
 ## Install and first test
 
@@ -83,8 +87,8 @@ travel, two-client behavior, and per-player discovery still need gameplay testin
    possible. After initial travel testing, turn Shroud travel off, prepare
    again, and verify a known Shroud destination is no longer offered while a
    clear destination in its category still is.
-5. Repeat on a test dedicated server with two modded clients before treating
-   multiplayer behavior as established.
+5. Repeat on a test dedicated server with two modded clients to verify
+   per-player discovery and simultaneous travel.
 
 When upgrading from 0.1.x or 0.2.x, `tools/migrate_config.py` carries the mod
 enabled state and compatible settings into the category configuration. It

@@ -2,7 +2,7 @@
   "$schema": "https://bonsaibauer.github.io/shroudforge/schemas/manifest.schema.json",
   "id": "enshrouded-teleportation-expanded",
   "name": "Enshrouded Teleportation Expanded",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Category-controlled map travel to discovered POIs, with optional Shroud sites.",
   "authors": ["Tellik"],
   "license": "MIT",
