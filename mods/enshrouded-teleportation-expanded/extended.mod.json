@@ -3,7 +3,8 @@
   "schemaVersion": 1,
   "enabled": true,
   "targets": [
-    "client"
+    "client",
+    "server"
   ],
   "launcher": "SF",
   "settings": {

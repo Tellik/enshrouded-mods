@@ -1,6 +1,8 @@
--- Category-controlled map travel for Enshrouded client build 26404966.
--- The game still handles discovery, travel, arrival, and server acceptance.
+-- Category-controlled map travel for Enshrouded build 26404966.
+-- Client and dedicated-server map labels must use the same marker types.
 assert(loader.features.patch, "Teleportation Expanded needs game.assets.write")
+assert(type(loader.is_server) == "boolean", "Unknown game target")
+local is_server = loader.is_server
 local catalog = require("locations")
 assert(catalog.build == 26404966, "Unexpected Teleportation Expanded catalog")
 
@@ -18,22 +20,25 @@ for key, category in pairs(catalog.categories) do
     category_count = category_count + 1
 end
 assert(category_count == 16, "POI category catalog changed")
-local registry_type = assert(game.types.get("keen::MapMarkerRegistryResource"))
-local registries = game.assets.get_resources_by_type(registry_type)
-assert(#registries == 1, "Expected one map-marker registry")
-local registry = registries[1]
-assert(registry.guid == "d165e819-f603-42a3-8f7d-827e9e8cb97a",
-    "Map-marker registry identity changed")
-local markers = registry.data
-local marker_map = markers.mapMarkers
-assert(marker_map and #marker_map.entries == 64 and
-    #marker_map.keys == 49 and #marker_map.values == 49,
-    "Map-marker registry layout changed")
-local filterable_count = 0
-for _, marker in ipairs(marker_map.values) do
-    if marker.canBeFiltered then filterable_count = filterable_count + 1 end
+local registry, markers, marker_map, filterable_count
+if not is_server then
+    local registry_type = assert(game.types.get("keen::MapMarkerRegistryResource"))
+    local registries = game.assets.get_resources_by_type(registry_type)
+    assert(#registries == 1, "Expected one map-marker registry")
+    registry = registries[1]
+    assert(registry.guid == "d165e819-f603-42a3-8f7d-827e9e8cb97a",
+        "Map-marker registry identity changed")
+    markers = registry.data
+    marker_map = markers.mapMarkers
+    assert(marker_map and #marker_map.entries == 64 and
+        #marker_map.keys == 49 and #marker_map.values == 49,
+        "Map-marker registry layout changed")
+    filterable_count = 0
+    for _, marker in ipairs(marker_map.values) do
+        if marker.canBeFiltered then filterable_count = filterable_count + 1 end
+    end
+    assert(filterable_count == 36, "Map-marker filter capacity changed")
 end
-assert(filterable_count == 36, "Map-marker filter capacity changed")
 
 -- The registry is a 64-bucket keyed map. Keys, values, and bucket offsets
 -- must all be updated together so the game can find the new marker types.
@@ -52,13 +57,13 @@ local function check_marker_map()
     end
     assert(expected == #marker_map.values, "Map-marker count mismatch")
 end
-check_marker_map()
+if not is_server then check_marker_map() end
 
 local scene_type = assert(game.types.get("keen::SceneEntityChunkResource"))
 local scene = assert(game.assets.get_resource("509feadb-4c60-425f-9c7c-deeefd9b6920", scene_type, 1600),
     "Map-label scene chunk missing")
 local chunk = scene.data
-assert(#chunk.entities == 1300 and #chunk.templates == 618 and
+assert(#chunk.entities == 1300 and #chunk.templates == (is_server and 617 or 618) and
     #chunk.templatesDoNotSave == 10,
     "Map-label scene layout changed; catalog needs regeneration")
 
@@ -68,7 +73,8 @@ assert(#collections == 1 and collections[1].guid == "377f61dc-c7b8-4e4f-830f-7d2
     "Template collection identity changed")
 local collection = collections[1]
 local all_templates = collection.data
-assert(#all_templates.templates == 12269, "Template collection layout changed")
+assert(#all_templates.templates == (is_server and 12267 or 12269),
+    "Template collection layout changed")
 
 local template_type = assert(game.types.get("keen::ecs::TemplateResource"))
 local enabled = {}
@@ -105,6 +111,7 @@ assert(#catalog.locations == 505, "Location catalog count changed")
 
 local created_types = {}
 local function create_travel_marker(source_type)
+    if is_server then return end
     if created_types[source_type] then return end
     local info = assert(catalog.markerTypes[source_type], "Unknown source marker type")
     local source_marker, source_key
@@ -171,21 +178,24 @@ for _, item in ipairs(enabled) do
 end
 
 if #enabled > 0 then
-    check_marker_map()
-    local final_filterable_count = 0
-    for _, marker in ipairs(marker_map.values) do
-        if marker.canBeFiltered then
-            final_filterable_count = final_filterable_count + 1
+    if not is_server then
+        check_marker_map()
+        local final_filterable_count = 0
+        for _, marker in ipairs(marker_map.values) do
+            if marker.canBeFiltered then
+                final_filterable_count = final_filterable_count + 1
+            end
         end
+        assert(final_filterable_count == filterable_count,
+            "Travel markers exceeded the game's map-filter capacity")
+        registry.data = markers
     end
-    assert(final_filterable_count == filterable_count,
-        "Travel markers exceeded the game's map-filter capacity")
     while #chunk.templatesDoNotSave < math.ceil(#chunk.templates / 64) do
         table.insert(chunk.templatesDoNotSave, 0)
     end
-    registry.data = markers
     collection.data = all_templates
     scene.data = chunk
 end
 shroudforge.log.info("Teleportation Expanded: enabled " .. #enabled ..
-    " POIs across " .. #catalog.locations .. " eligible locations")
+    " POIs across " .. #catalog.locations .. " eligible locations on " ..
+    (is_server and "server" or "client"))

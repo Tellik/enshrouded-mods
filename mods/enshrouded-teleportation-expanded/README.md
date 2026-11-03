@@ -1,7 +1,8 @@
-# Enshrouded Teleportation Expanded 0.3.1
+# Enshrouded Teleportation Expanded 0.4.0
 
-This ShroudForge client mod adds map travel to **505 placed points of interest**
-in Enshrouded build **26404966**. It has 16 category switches and one separate
+This ShroudForge mod adds map travel to **505 placed points of interest**
+in Enshrouded client build **26404966**. Install it on each participating client
+and the dedicated server with matching settings. It has 16 category switches and one separate
 **Allow travel into Shroud** switch. It leaves Ancient Spires and placed Flame
 Altars with their normal behavior. Elixir Wells, Fog Nests, Shroud Roots, and
 related sites are excluded from the catalog.
@@ -16,7 +17,8 @@ Shroud cannot be selected for expanded travel even if its category is on.
 ## Settings
 
 Edit `mods/enshrouded-teleportation-expanded/extended.mod.json` beside
-`enshrouded.exe`, or use the ShroudForge mod settings UI. Each category has one
+the client or server executable, or use the ShroudForge mod settings UI. Keep
+the server and client switches the same. Each category has one
 true/false switch. The 16 categories are Flame Shrines, Flame Sanctums, Gem
 Forges, Night Sanctums, Dungeons, Hollow Halls, Ancient Vaults, Obelisks,
 Tombs, Balefire Sites, Mines, Caves, Enemy Camps, Villages/Towns, Survivor
@@ -33,15 +35,17 @@ site as safe. The all-enabled test config deliberately bypasses that guard.
 
 The selected map labels get travel-enabled marker types that do not appear
 above unexplored fog. These added marker types stay outside the game's fixed
-map-filter list. The mod does not uncover the map, move players directly,
-or edit world saves. The game still handles discovery, travel, arrival, and
-server acceptance.
+map-filter list. The server receives matching map-label templates and the
+client receives their marker definitions. The mod does not uncover the map,
+move players directly, or edit world saves. The game still handles discovery,
+travel, arrival, and server acceptance.
 
 ## Build and test status
 
-The catalog is tied to client build **26404966**. It checks the registry,
-map-label scene, template collection, and source POI positions before changing
-assets. If those change, preparation fails and the catalog needs regeneration.
+The catalog is tied to client build **26404966** and the tested dedicated-server
+asset layout. It checks the client registry, map-label scenes, template
+collections, and source POI positions before changing assets. If those change,
+preparation fails and the catalog needs regeneration.
 
 In a disposable game copy, ShroudForge prepared **250** destinations with the
 packaged defaults and **505** with every switch on. Readback of the all-enabled
@@ -52,22 +56,26 @@ map-filter list from 36 entries to 51. Version 0.3.1 leaves the 15 travel
 types out of that list; readback confirms 36 filterable types and 21 travel
 types. These are asset checks, not gameplay or multiplayer proof.
 
+Version 0.4.0 prepared successfully in isolated client and server copies with
+all switches on. Readback confirmed that the same 505 scene entities point to
+the same new template IDs on both sides. This confirms asset alignment, not
+dedicated-server travel.
+
 The earlier Shrine/Sanctum prototype worked in single player and with one
 modded client on an unmodded dedicated server. In a 0.3.1 single-player test,
 the world loaded and the player reported successful travel to multiple enabled
 locations, including a Hollow Hall and a Gem Forge. The game log records six
 travel events and a normal shutdown. The player also confirmed that an
-undiscovered destination could not be selected. The Shroud-off rule,
-two-client behavior, and per-player discovery still need gameplay testing.
-The dedicated server has no client map-marker registry, so each player wanting
-expanded markers installs the mod on their own client.
+undiscovered destination could not be selected. On an unmodded dedicated server,
+the 0.3.1 Fast Travel option was missing. The Shroud-off rule, 0.4.0 dedicated
+travel, two-client behavior, and per-player discovery still need gameplay testing.
 
 ## Install and first test
 
-1. Close Enshrouded. Keep the mod at
-   `mods/enshrouded-teleportation-expanded` beside `enshrouded.exe`.
-2. For this first test, set every category and `allowIntoShroud` to `true`.
-   Launch with ShroudForge to prepare the client assets. The log should report
+1. Stop the game and test server. Keep the mod at
+   `mods/enshrouded-teleportation-expanded` beside both executables.
+2. For this first test, set every category and `allowIntoShroud` to `true` on
+   both sides. Run ShroudForge preparation for the client and server. Each log should report
    `enabled 505 POIs across 505 eligible locations`.
 3. In a disposable world, try a discovered Shrine/Sanctum, Gem Forge, and one
    destination from a broad category. Confirm each travel option and arrival.
