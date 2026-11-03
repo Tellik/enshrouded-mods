@@ -29,6 +29,11 @@ local marker_map = markers.mapMarkers
 assert(marker_map and #marker_map.entries == 64 and
     #marker_map.keys == 49 and #marker_map.values == 49,
     "Map-marker registry layout changed")
+local filterable_count = 0
+for _, marker in ipairs(marker_map.values) do
+    if marker.canBeFiltered then filterable_count = filterable_count + 1 end
+end
+assert(filterable_count == 36, "Map-marker filter capacity changed")
 
 -- The registry is a 64-bucket keyed map. Keys, values, and bucket offsets
 -- must all be updated together so the game can find the new marker types.
@@ -123,6 +128,9 @@ local function create_travel_marker(source_type)
     travel_marker.markerId.value = info.travelId
     travel_marker.isFastTravelDestination = true
     travel_marker.showAboveFogOfWar = false
+    -- The game has a 40-entry SmallDynamicArray for filterable marker types.
+    -- Its 36 original types leave room for only four; travel clones stay out.
+    travel_marker.canBeFiltered = false
     entry.count = entry.count + 1
     for i = bucket + 1, #marker_map.entries do
         marker_map.entries[i].start = marker_map.entries[i].start + 1
@@ -164,6 +172,14 @@ end
 
 if #enabled > 0 then
     check_marker_map()
+    local final_filterable_count = 0
+    for _, marker in ipairs(marker_map.values) do
+        if marker.canBeFiltered then
+            final_filterable_count = final_filterable_count + 1
+        end
+    end
+    assert(final_filterable_count == filterable_count,
+        "Travel markers exceeded the game's map-filter capacity")
     while #chunk.templatesDoNotSave < math.ceil(#chunk.templates / 64) do
         table.insert(chunk.templatesDoNotSave, 0)
     end

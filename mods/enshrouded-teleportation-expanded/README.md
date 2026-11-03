@@ -1,4 +1,4 @@
-# Enshrouded Teleportation Expanded 0.3.0
+# Enshrouded Teleportation Expanded 0.3.1
 
 This ShroudForge client mod adds map travel to **505 placed points of interest**
 in Enshrouded build **26404966**. It has 16 category switches and one separate
@@ -32,7 +32,8 @@ Shroud. Confirm the arrival point and Shroud timer in game before treating a
 site as safe. The all-enabled test config deliberately bypasses that guard.
 
 The selected map labels get travel-enabled marker types that do not appear
-above unexplored fog. The mod does not uncover the map, move players directly,
+above unexplored fog. These added marker types stay outside the game's fixed
+map-filter list. The mod does not uncover the map, move players directly,
 or edit world saves. The game still handles discovery, travel, arrival, and
 server acceptance.
 
@@ -45,11 +46,14 @@ assets. If those change, preparation fails and the catalog needs regeneration.
 In a disposable game copy, ShroudForge prepared **250** destinations with the
 packaged defaults and **505** with every switch on. Readback of the all-enabled
 build confirmed 505 selected scene changes and cloned templates, 15 new travel
-marker types, and unchanged source marker types. These are asset checks, not
-gameplay or multiplayer proof.
+marker types, and unchanged source marker types. Version 0.3.0 crashed when
+loading a world because its 15 new marker types raised the game's 40-entry
+map-filter list from 36 entries to 51. Version 0.3.1 leaves the 15 travel
+types out of that list; readback confirms 36 filterable types and 21 travel
+types. These are asset checks, not gameplay or multiplayer proof.
 
 The earlier Shrine/Sanctum prototype worked in single player and with one
-modded client on an unmodded dedicated server. Version 0.3.0 changes the
+modded client on an unmodded dedicated server. Version 0.3.1 changes the
 selection and has not yet been tested in game. Fog discovery, Shroud arrival,
 two-client behavior, and per-player discovery still need testing. The dedicated
 server has no client map-marker registry, so each player wanting expanded
