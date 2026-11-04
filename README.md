@@ -5,6 +5,11 @@ Install it on the PC where you play, whether you use single-player or join a
 dedicated server. Do not install it on the server. The mod stays inactive on an
 unsupported game executable or ShroudForge ABI.
 
+The published v0.3.2 ZIP supports build `26082781`. This draft branch adds
+unreleased support for build `26430625`, whose world session is not recognized
+by the installed ShroudForge 1.7.7 profile. The new fallback passed a read-only
+input probe; gameplay and stability testing are still pending.
+
 ## Download
 
 - [Autorun v0.3.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.2): download `autorun-0.3.2.zip`.

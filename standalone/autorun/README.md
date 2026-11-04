@@ -3,12 +3,19 @@
 This is a separate, client-only ShroudForge mod. It does not replace
 `kfc-runtime.dll`, `shroudforge-runtime.dll`, or any other ShroudForge file.
 ShroudForge loads the mod's own `bin/autorun.dll` through
-`native-plugin.ini`. The plugin is restricted to Enshrouded Steam build
-`26082781` and ShroudForge's ABI-12 world API; it stays inactive if either
-check fails. Single-player and dedicated-server Proton tests on stock
+`native-plugin.ini`. The published v0.3.2 plugin is restricted to Enshrouded
+Steam build `26082781` and ShroudForge's ABI-12 world API; it stays inactive if
+either check fails. Single-player and dedicated-server Proton tests on stock
 ShroudForge 1.7.6 passed with F7 as a custom hotkey. The mod owner also
 confirmed Autorun works on the patched 1.7.7 client loader used by Free
 Airborne Architect.
+
+The unreleased development branch also recognizes game build `26430625`.
+Installed ShroudForge 1.7.7 has no profile for that build, so Autorun's draft
+fix uses its exact-build local movement callback to identify in-world input.
+The read-only probe found valid W/S input in the world and no callbacks at the
+main menu. Active movement testing and the requested one-hour stability check
+are still pending; the v0.3.2 ZIP below does not contain this fix.
 
 Download the `autorun-0.3.2.zip` asset from the
 [Autorun v0.3.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.2)
