@@ -40,11 +40,13 @@ jobs:
           $plugin = Get-ChildItem .\build\autorun-plugin -Recurse -Filter autorun.dll | Select-Object -First 1
           if (-not $plugin) { throw 'Autorun plugin DLL is missing.' }
           $manifest = Get-Content .\standalone\autorun\mod.json -Raw | ConvertFrom-Json
-          $archive = ".\build\autorun-$($manifest.version).zip"
-          python .\dev\build\package_autorun.py --dll $plugin.FullName --out $archive
+          if ($manifest.version -ne '0.4.0') { throw 'Unexpected Autorun version.' }
+          python .\dev\build\package_autorun.py --dll $plugin.FullName --out-dir .\build
           if ($LASTEXITCODE -ne 0) { throw 'Autorun packaging failed.' }
-          python .\dev\build\package_autorun.py --verify $archive
-          if ($LASTEXITCODE -ne 0) { throw 'Autorun package verification failed.' }
+          foreach ($archive in (Get-ChildItem .\build -Filter 'autorun-0.4.0-*.zip')) {
+            python .\dev\build\package_autorun.py --verify $archive.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Autorun package verification failed: $($archive.Name)" }
+          }
 
       - name: Upload Autorun ZIP and checksum
         uses: actions/upload-artifact@v7
