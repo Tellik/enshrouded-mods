@@ -27,13 +27,22 @@
 namespace {
 // Use only ShroudForge's existing package DLL loader and stable ABI-12 world
 // identity functions. Movement injection is entirely owned by this plugin.
-constexpr std::uintptr_t InputHookRva = 0x243b5c;
 constexpr std::size_t MovementX = 0x2b8, MovementY = 0x2bc;
 constexpr std::uint8_t Original[]{0x0f, 0xb6, 0xc8, 0x84, 0xc0};
 constexpr auto Signature = "0F B6 C8 84 C0 74 5A 83 F9 01 74 20";
-constexpr auto ImageSha256 = "d64966e23b1a458ee6f147bcbceac0b577fa7e39a212f371287d8cc119817882";
-constexpr std::uint32_t ImageTimestamp = 1792507660u;
-constexpr std::uint32_t ImageSize = 44163072u;
+struct ImageProfile {
+    const char* build;
+    const char* sha256;
+    std::uint32_t timestamp;
+    std::uint32_t image_size;
+    std::uintptr_t hook_rva;
+};
+constexpr ImageProfile Images[]{
+    {"26082781", "d64966e23b1a458ee6f147bcbceac0b577fa7e39a212f371287d8cc119817882",
+        1792507660u, 44163072u, 0x243b5c},
+    {"26430625", "5d9ef2f140b8ed49e30dbee655841b89d08baec20f799a1817e171a18a850c77",
+        1793791052u, 44298240u, 0x247b6c},
+};
 constexpr std::uint64_t WorkerDeadlineMs = 250;
 constexpr int NativeStopBit = 0x100;
 
@@ -183,20 +192,28 @@ std::vector<std::uint8_t> callback_code() {
     return code;
 }
 
-bool game_image_matches() {
+const ImageProfile* game_image_profile() {
     auto* base = reinterpret_cast<std::uint8_t*>(GetModuleHandleW(nullptr));
-    if (!base) return false;
+    if (!base) return nullptr;
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-    if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew <= 0) return false;
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew <= 0) return nullptr;
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS64*>(base + dos->e_lfanew);
-    if (nt->Signature != IMAGE_NT_SIGNATURE || nt->FileHeader.TimeDateStamp != ImageTimestamp ||
-        nt->OptionalHeader.SizeOfImage != ImageSize) return false;
+    if (nt->Signature != IMAGE_NT_SIGNATURE) return nullptr;
+    const ImageProfile* candidate{};
+    for (const auto& image : Images) {
+        if (nt->FileHeader.TimeDateStamp == image.timestamp &&
+            nt->OptionalHeader.SizeOfImage == image.image_size) {
+            candidate = &image;
+            break;
+        }
+    }
+    if (!candidate) return nullptr;
     wchar_t path[32768]{};
     const auto length = GetModuleFileNameW(nullptr, path, static_cast<DWORD>(std::size(path)));
-    if (!length || length >= std::size(path)) return false;
+    if (!length || length >= std::size(path)) return nullptr;
     HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
         nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE) return false;
+    if (file == INVALID_HANDLE_VALUE) return nullptr;
     BCRYPT_ALG_HANDLE algorithm{};
     BCRYPT_HASH_HANDLE hash{};
     bool okay = BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) >= 0;
@@ -220,38 +237,40 @@ bool game_image_matches() {
     if (hash) BCryptDestroyHash(hash);
     if (algorithm) BCryptCloseAlgorithmProvider(algorithm, 0);
     CloseHandle(file);
-    if (!okay) return false;
+    if (!okay) return nullptr;
     constexpr char hex[] = "0123456789abcdef";
     char text[65]{};
     for (std::size_t i = 0; i < digest.size(); ++i) {
         text[i * 2] = hex[digest[i] >> 4];
         text[i * 2 + 1] = hex[digest[i] & 15];
     }
-    return std::string_view(text, 64) == ImageSha256;
+    return std::string_view(text, 64) == candidate->sha256 ? candidate : nullptr;
 }
 
-bool install_hook() {
+const ImageProfile* install_hook() {
     auto* base = reinterpret_cast<std::uint8_t*>(GetModuleHandleW(nullptr));
-    if (!base || !game_image_matches()) return false;
+    if (!base) return nullptr;
+    const auto* image = game_image_profile();
+    if (!image) return nullptr;
     const auto match = EngineHooks::FindExecutableSignature(base, Signature, 2);
-    const auto target = reinterpret_cast<std::uintptr_t>(base) + InputHookRva;
+    const auto target = reinterpret_cast<std::uintptr_t>(base) + image->hook_rva;
     if (match.count != 1 || match.address != target ||
-        std::memcmp(reinterpret_cast<void*>(target), Original, sizeof(Original))) return false;
+        std::memcmp(reinterpret_cast<void*>(target), Original, sizeof(Original))) return nullptr;
     HMODULE pinned{};
     if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-        reinterpret_cast<LPCWSTR>(&install_hook), &pinned)) return false;
+        reinterpret_cast<LPCWSTR>(&install_hook), &pinned)) return nullptr;
     auto code = callback_code();
     code.insert(code.end(), std::begin(Original), std::end(Original));
     const auto jump_offset = code.size();
     code.insert(code.end(), {0xe9,0,0,0,0});
     auto* payload = static_cast<std::uint8_t*>(EngineHooks::AllocateNearCode(target, code.size()));
-    if (!payload) return false;
+    if (!payload) return nullptr;
     std::int32_t back{}, detour{};
     if (!EngineHooks::EncodeRelativeJump(reinterpret_cast<std::uintptr_t>(payload) + jump_offset,
             target + sizeof(Original), back) ||
         !EngineHooks::EncodeRelativeJump(target, reinterpret_cast<std::uintptr_t>(payload), detour)) {
         VirtualFree(payload, 0, MEM_RELEASE);
-        return false;
+        return nullptr;
     }
     std::memcpy(code.data() + jump_offset + 1, &back, sizeof(back));
     std::memcpy(payload, code.data(), code.size());
@@ -260,10 +279,10 @@ bool install_hook() {
     std::memcpy(replacement + 1, &detour, sizeof(detour));
     if (!EngineHooks::ReplaceExecutableBytes(target, Original, replacement, sizeof(Original))) {
         VirtualFree(payload, 0, MEM_RELEASE);
-        return false;
+        return nullptr;
     }
     installed.store(true, std::memory_order_release);
-    return true;
+    return image;
 }
 
 struct Chord { int key{}; unsigned modifiers{}; bool operator==(const Chord&) const = default; };
@@ -441,8 +460,9 @@ DWORD WINAPI worker(void*) {
     }
     session_id.store(session, std::memory_order_release);
     context_active.store(context, std::memory_order_release);
-    if (!install_hook()) { log(root, "Game image or hook did not match the supported build; plugin is inactive"); return 0; }
-    log(root, "Exact-build input hook installed");
+    const auto* image = install_hook();
+    if (!image) { log(root, "Game image or hook did not match the supported build; plugin is inactive"); return 0; }
+    log(root, std::string("Exact-build input hook installed for build ") + image->build);
     std::optional<Settings> settings;
     std::uint64_t config_at{}, report_at{}, previous_session{}, previous_worker_at{};
     std::uint64_t idle_report_at{}, observation_report_at{}, previous_replacements{};
