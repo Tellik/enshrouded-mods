@@ -45,6 +45,7 @@ constexpr ImageProfile Images[]{
 };
 constexpr std::uint64_t WorkerDeadlineMs = 250;
 constexpr int NativeStopBit = 0x100;
+constexpr bool ReadOnlyWorldProbe = true;
 
 using SessionIdFn = std::uint64_t (__cdecl*)();
 using ContextActiveFn = bool (__cdecl*)();
@@ -55,6 +56,9 @@ std::atomic<bool> installed{}, active{};
 std::atomic<std::uint64_t> active_session{}, deadline_ms{}, last_hook_ms{};
 std::atomic<std::uint64_t> hook_hits{}, local_hits{}, writes{};
 std::atomic<int> stop_reason{};
+std::atomic<const void*> probe_input{};
+std::atomic<std::uint64_t> probe_hits{}, probe_valid_axes{}, probe_forward{}, probe_backward{},
+    probe_neutral{}, probe_replacements{};
 HMODULE plugin_module{};
 
 enum StopReason { None, Toggle, Backward, Session, Expired, InputChanged, SettingsChanged };
@@ -144,6 +148,19 @@ bool apply_forward(void* input, float x, float y) {
 
 void __cdecl on_movement_input(void* input) {
     if (!installed.load(std::memory_order_acquire) || !input) return;
+    if constexpr (ReadOnlyWorldProbe) {
+        probe_hits.fetch_add(1, std::memory_order_relaxed);
+        if (probe_input.exchange(input, std::memory_order_relaxed) != input)
+            probe_replacements.fetch_add(1, std::memory_order_relaxed);
+        float x{}, y{};
+        if (read_axes(input, x, y)) {
+            probe_valid_axes.fetch_add(1, std::memory_order_relaxed);
+            if (y > 0.5f) probe_forward.fetch_add(1, std::memory_order_relaxed);
+            else if (y < -0.5f) probe_backward.fetch_add(1, std::memory_order_relaxed);
+            else probe_neutral.fetch_add(1, std::memory_order_relaxed);
+        }
+        return;
+    }
     const auto session_fn = session_id.load(std::memory_order_acquire);
     const auto context_fn = context_active.load(std::memory_order_acquire);
     if (!session_fn || !context_fn) return;
@@ -462,7 +479,8 @@ DWORD WINAPI worker(void*) {
     context_active.store(context, std::memory_order_release);
     const auto* image = install_hook();
     if (!image) { log(root, "Game image or hook did not match the supported build; plugin is inactive"); return 0; }
-    log(root, std::string("Exact-build input hook installed for build ") + image->build);
+    log(root, std::string("Exact-build input hook installed for build ") + image->build +
+        (ReadOnlyWorldProbe ? " (read-only world probe; Autorun disabled)" : ""));
     std::optional<Settings> settings;
     std::uint64_t config_at{}, report_at{}, previous_session{}, previous_worker_at{};
     std::uint64_t idle_report_at{}, observation_report_at{}, previous_replacements{};
@@ -471,6 +489,19 @@ DWORD WINAPI worker(void*) {
     unsigned reports{};
     while (true) {
         const auto now = GetTickCount64();
+        if constexpr (ReadOnlyWorldProbe) {
+            log(root, "World probe session=" + std::to_string(session()) +
+                " context=" + std::to_string(context()) +
+                " foreground=" + std::to_string(foreground_game()) +
+                " hits=" + std::to_string(probe_hits.load(std::memory_order_relaxed)) +
+                " valid_axes=" + std::to_string(probe_valid_axes.load(std::memory_order_relaxed)) +
+                " forward=" + std::to_string(probe_forward.load(std::memory_order_relaxed)) +
+                " backward=" + std::to_string(probe_backward.load(std::memory_order_relaxed)) +
+                " neutral=" + std::to_string(probe_neutral.load(std::memory_order_relaxed)) +
+                " input_changes=" + std::to_string(probe_replacements.load(std::memory_order_relaxed)));
+            Sleep(5000);
+            continue;
+        }
         const auto worker_gap_ms = previous_worker_at && now >= previous_worker_at ?
             now - previous_worker_at : 0;
         previous_worker_at = now;
