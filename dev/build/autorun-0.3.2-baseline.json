@@ -1,0 +1,13 @@
+{
+  "baseVersion": "0.3.2",
+  "baseZipSha256": "91347b6a2455b03152abdfc0011024097978802c2071c8c66f3ba7c8a0e7918a",
+  "membersSha256": {
+    "autorun/LICENSE": "6feff1bff1bf320ac2d0bcbabe9f3a91eee74fdd2f57888084299829f7e08c6d",
+    "autorun/LICENSE.nlohmann": "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603",
+    "autorun/README.md": "0b6169b23b63caf687eb20db34f1c3a7d69e54a4e35252ccfea3704df45cfb0a",
+    "autorun/bin/autorun.dll": "5e960adfb9e8b5141a00e0acee79c8ebe07288f43d3f2b414376a2bde2384d50",
+    "autorun/extended.mod.json": "3086626444cfc6d7e90e87ca74f92c43a0baf10ae7fe745a01ab6b35ac9318fd",
+    "autorun/mod.json": "b0fa9eace6bca72b11947a1a01ac62237b370b17e592da8baaab94690fd931d8",
+    "autorun/native-plugin.ini": "c7da1304b56fbc046d0096d9cb92199df09adfd1d6bcfd10dc8d0fd8cf06d94c"
+  }
+}

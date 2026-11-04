@@ -11,6 +11,7 @@
 #include <atomic>
 #include <charconv>
 #include <cmath>
+#include <cstdio>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -24,34 +25,46 @@
 #include <vector>
 
 namespace {
-// Use only ShroudForge's existing package DLL loader and stable ABI-12 world
-// identity functions. Movement injection is entirely owned by this plugin.
-constexpr std::uintptr_t InputHookRva = 0x243b5c;
+// Use ShroudForge's existing package DLL loader. Movement injection and the
+// exact-build fallback for unavailable world identity are owned by this plugin.
 constexpr std::size_t MovementX = 0x2b8, MovementY = 0x2bc;
 constexpr std::uint8_t Original[]{0x0f, 0xb6, 0xc8, 0x84, 0xc0};
 constexpr auto Signature = "0F B6 C8 84 C0 74 5A 83 F9 01 74 20";
-constexpr auto ImageSha256 = "d64966e23b1a458ee6f147bcbceac0b577fa7e39a212f371287d8cc119817882";
-constexpr std::uint32_t ImageTimestamp = 1792507660u;
-constexpr std::uint32_t ImageSize = 44163072u;
+struct ImageProfile {
+    const char* build;
+    const char* sha256;
+    std::uint32_t timestamp;
+    std::uint32_t image_size;
+    std::uintptr_t hook_rva;
+    bool hook_world_fallback;
+};
+constexpr ImageProfile Images[]{
+    {"26082781", "d64966e23b1a458ee6f147bcbceac0b577fa7e39a212f371287d8cc119817882",
+        1792507660u, 44163072u, 0x243b5c, false},
+    {"26430625", "5d9ef2f140b8ed49e30dbee655841b89d08baec20f799a1817e171a18a850c77",
+        1793791052u, 44298240u, 0x247b6c, true},
+};
 constexpr std::uint64_t WorkerDeadlineMs = 250;
+constexpr std::uint64_t FallbackSession = 1ull << 63;
+constexpr std::uint64_t FallbackStartMaximumIdleMs = 100;
+constexpr int NativeStopBit = 0x100;
 
 using SessionIdFn = std::uint64_t (__cdecl*)();
 using ContextActiveFn = bool (__cdecl*)();
 using AbiFn = std::uint32_t (__cdecl*)();
 std::atomic<SessionIdFn> session_id{};
 std::atomic<ContextActiveFn> context_active{};
-std::atomic<bool> installed{}, active{};
+std::atomic<bool> installed{}, active{}, hook_world_fallback{}, observed_world_input{};
 std::atomic<std::uint64_t> active_session{}, deadline_ms{}, last_hook_ms{};
 std::atomic<std::uint64_t> hook_hits{}, local_hits{}, writes{};
 std::atomic<int> stop_reason{};
 HMODULE plugin_module{};
 
-enum StopReason { None, Toggle, Backward, Focus, Session, Expired, InputChanged, SettingsChanged };
+enum StopReason { None, Toggle, Backward, Session, Expired, InputChanged, SettingsChanged };
 const char* reason_name(int value) {
     switch (value) {
     case Toggle: return "toggle key";
     case Backward: return "backward input";
-    case Focus: return "game lost focus";
     case Session: return "world session changed";
     case Expired: return "native deadline expired";
     case InputChanged: return "observed input changed";
@@ -60,9 +73,9 @@ const char* reason_name(int value) {
     }
 }
 
-void stop(StopReason reason) {
+void stop(StopReason reason, bool from_hook = false) {
     if (active.exchange(false, std::memory_order_acq_rel))
-        stop_reason.store(reason, std::memory_order_release);
+        stop_reason.store(reason | (from_hook ? NativeStopBit : 0), std::memory_order_release);
 }
 
 std::mutex observation_mutex;
@@ -82,7 +95,7 @@ void observe_input(const void* input, std::uint64_t session, std::uint64_t now) 
     if (!lock.owns_lock()) return;
     const bool changed = observation.observe(input, session, now);
     lock.unlock();
-    if (changed) stop(InputChanged);
+    if (changed) stop(InputChanged, true);
 }
 
 AutorunInput::Snapshot input_snapshot(std::uint64_t session, std::uint64_t now) {
@@ -138,24 +151,34 @@ void __cdecl on_movement_input(void* input) {
     const auto context_fn = context_active.load(std::memory_order_acquire);
     if (!session_fn || !context_fn) return;
     const auto now = GetTickCount64();
-    const auto session = session_fn();
-    if (session && context_fn() && foreground_game()) observe_input(input, session, now);
+    const auto runtime_session = session_fn();
+    const bool runtime_context = context_fn();
+    const bool fallback = hook_world_fallback.load(std::memory_order_acquire) &&
+        (!runtime_session || !runtime_context);
+    float x{}, y{};
+    if (fallback) {
+        // The exact-build probe observed this callback only in a loaded world.
+        // Require sane movement axes before accepting it as world evidence.
+        if (!read_axes(input, x, y)) { stop(InputChanged, true); return; }
+        observed_world_input.store(true, std::memory_order_release);
+    }
+    const auto session = fallback ? FallbackSession : runtime_session;
+    if (session && (runtime_context || fallback)) observe_input(input, session, now);
     if (!active.load(std::memory_order_acquire)) return;
     hook_hits.fetch_add(1, std::memory_order_relaxed);
     last_hook_ms.store(now, std::memory_order_release);
-    if (!session || session != active_session.load(std::memory_order_acquire) || !context_fn()) {
-        stop(Session);
+    if (!session || session != active_session.load(std::memory_order_acquire) ||
+        (!runtime_context && !fallback)) {
+        stop(Session, true);
         return;
     }
-    if (!foreground_game()) { stop(Focus); return; }
-    if (now > deadline_ms.load(std::memory_order_acquire)) { stop(Expired); return; }
+    if (now > deadline_ms.load(std::memory_order_acquire)) { stop(Expired, true); return; }
     if (input_snapshot(session, now).stable_input != input) return;
     local_hits.fetch_add(1, std::memory_order_relaxed);
-    float x{}, y{};
-    if (!read_axes(input, x, y)) { stop(InputChanged); return; }
-    if (y < -0.1f) { stop(Backward); return; }
+    if (!fallback && !read_axes(input, x, y)) { stop(InputChanged, true); return; }
+    if (y < -0.1f) { stop(Backward, true); return; }
     if (apply_forward(input, x, y)) writes.fetch_add(1, std::memory_order_relaxed);
-    else stop(InputChanged);
+    else stop(InputChanged, true);
 }
 
 std::vector<std::uint8_t> callback_code() {
@@ -183,20 +206,28 @@ std::vector<std::uint8_t> callback_code() {
     return code;
 }
 
-bool game_image_matches() {
+const ImageProfile* game_image_profile() {
     auto* base = reinterpret_cast<std::uint8_t*>(GetModuleHandleW(nullptr));
-    if (!base) return false;
+    if (!base) return nullptr;
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-    if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew <= 0) return false;
+    if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew <= 0) return nullptr;
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS64*>(base + dos->e_lfanew);
-    if (nt->Signature != IMAGE_NT_SIGNATURE || nt->FileHeader.TimeDateStamp != ImageTimestamp ||
-        nt->OptionalHeader.SizeOfImage != ImageSize) return false;
+    if (nt->Signature != IMAGE_NT_SIGNATURE) return nullptr;
+    const ImageProfile* candidate{};
+    for (const auto& image : Images) {
+        if (nt->FileHeader.TimeDateStamp == image.timestamp &&
+            nt->OptionalHeader.SizeOfImage == image.image_size) {
+            candidate = &image;
+            break;
+        }
+    }
+    if (!candidate) return nullptr;
     wchar_t path[32768]{};
     const auto length = GetModuleFileNameW(nullptr, path, static_cast<DWORD>(std::size(path)));
-    if (!length || length >= std::size(path)) return false;
+    if (!length || length >= std::size(path)) return nullptr;
     HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
         nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE) return false;
+    if (file == INVALID_HANDLE_VALUE) return nullptr;
     BCRYPT_ALG_HANDLE algorithm{};
     BCRYPT_HASH_HANDLE hash{};
     bool okay = BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) >= 0;
@@ -220,38 +251,40 @@ bool game_image_matches() {
     if (hash) BCryptDestroyHash(hash);
     if (algorithm) BCryptCloseAlgorithmProvider(algorithm, 0);
     CloseHandle(file);
-    if (!okay) return false;
+    if (!okay) return nullptr;
     constexpr char hex[] = "0123456789abcdef";
     char text[65]{};
     for (std::size_t i = 0; i < digest.size(); ++i) {
         text[i * 2] = hex[digest[i] >> 4];
         text[i * 2 + 1] = hex[digest[i] & 15];
     }
-    return std::string_view(text, 64) == ImageSha256;
+    return std::string_view(text, 64) == candidate->sha256 ? candidate : nullptr;
 }
 
-bool install_hook() {
+const ImageProfile* install_hook() {
     auto* base = reinterpret_cast<std::uint8_t*>(GetModuleHandleW(nullptr));
-    if (!base || !game_image_matches()) return false;
+    if (!base) return nullptr;
+    const auto* image = game_image_profile();
+    if (!image) return nullptr;
     const auto match = EngineHooks::FindExecutableSignature(base, Signature, 2);
-    const auto target = reinterpret_cast<std::uintptr_t>(base) + InputHookRva;
+    const auto target = reinterpret_cast<std::uintptr_t>(base) + image->hook_rva;
     if (match.count != 1 || match.address != target ||
-        std::memcmp(reinterpret_cast<void*>(target), Original, sizeof(Original))) return false;
+        std::memcmp(reinterpret_cast<void*>(target), Original, sizeof(Original))) return nullptr;
     HMODULE pinned{};
     if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-        reinterpret_cast<LPCWSTR>(&install_hook), &pinned)) return false;
+        reinterpret_cast<LPCWSTR>(&install_hook), &pinned)) return nullptr;
     auto code = callback_code();
     code.insert(code.end(), std::begin(Original), std::end(Original));
     const auto jump_offset = code.size();
     code.insert(code.end(), {0xe9,0,0,0,0});
     auto* payload = static_cast<std::uint8_t*>(EngineHooks::AllocateNearCode(target, code.size()));
-    if (!payload) return false;
+    if (!payload) return nullptr;
     std::int32_t back{}, detour{};
     if (!EngineHooks::EncodeRelativeJump(reinterpret_cast<std::uintptr_t>(payload) + jump_offset,
             target + sizeof(Original), back) ||
         !EngineHooks::EncodeRelativeJump(target, reinterpret_cast<std::uintptr_t>(payload), detour)) {
         VirtualFree(payload, 0, MEM_RELEASE);
-        return false;
+        return nullptr;
     }
     std::memcpy(code.data() + jump_offset + 1, &back, sizeof(back));
     std::memcpy(payload, code.data(), code.size());
@@ -260,10 +293,11 @@ bool install_hook() {
     std::memcpy(replacement + 1, &detour, sizeof(detour));
     if (!EngineHooks::ReplaceExecutableBytes(target, Original, replacement, sizeof(Original))) {
         VirtualFree(payload, 0, MEM_RELEASE);
-        return false;
+        return nullptr;
     }
+    hook_world_fallback.store(image->hook_world_fallback, std::memory_order_release);
     installed.store(true, std::memory_order_release);
-    return true;
+    return image;
 }
 
 struct Chord { int key{}; unsigned modifiers{}; bool operator==(const Chord&) const = default; };
@@ -387,8 +421,40 @@ std::filesystem::path plugin_dir() {
 void log(const std::filesystem::path& root, const std::string& message) {
     OutputDebugStringA(("[autorun] " + message + "\n").c_str());
     if (root.empty()) return;
+    SYSTEMTIME utc{};
+    GetSystemTime(&utc);
+    char timestamp[32]{};
+    std::snprintf(timestamp, sizeof(timestamp), "%04u-%02u-%02uT%02u:%02u:%02u.%03uZ",
+        static_cast<unsigned>(utc.wYear), static_cast<unsigned>(utc.wMonth),
+        static_cast<unsigned>(utc.wDay), static_cast<unsigned>(utc.wHour),
+        static_cast<unsigned>(utc.wMinute), static_cast<unsigned>(utc.wSecond),
+        static_cast<unsigned>(utc.wMilliseconds));
     std::ofstream stream(root / "autorun-plugin.log", std::ios::app);
-    stream << GetTickCount64() << " " << message << '\n';
+    stream << timestamp << " tick_ms=" << GetTickCount64() << " " << message << '\n';
+}
+
+std::string diagnostic_state(std::uint64_t now, std::uint64_t current,
+        bool context, bool foreground, std::uint64_t worker_gap_ms) {
+    const auto sampled_at = GetTickCount64();
+    const auto hook_at = last_hook_ms.load(std::memory_order_acquire);
+    const auto deadline = deadline_ms.load(std::memory_order_acquire);
+    const auto snapshot = input_snapshot(current, sampled_at);
+    return " session=" + std::to_string(current) +
+        " world_gate=" + (current == FallbackSession ? "input-hook" : "kfc") +
+        " active_session=" + std::to_string(active_session.load(std::memory_order_acquire)) +
+        " context=" + std::to_string(context) +
+        " foreground=" + std::to_string(foreground) +
+        " worker_gap_ms=" + std::to_string(worker_gap_ms) +
+        " loop_elapsed_ms=" + std::to_string(sampled_at >= now ? sampled_at - now : 0) +
+        " hook_idle_ms=" + std::to_string(sampled_at >= hook_at ? sampled_at - hook_at : 0) +
+        (sampled_at > deadline ? " deadline_late_ms=" + std::to_string(sampled_at - deadline) :
+            " deadline_left_ms=" + std::to_string(deadline - sampled_at)) +
+        " input=" + input_status(snapshot) +
+        " input_hits=" + std::to_string(snapshot.hits) +
+        " input_replacements=" + std::to_string(snapshot.replacements) +
+        " hits=" + std::to_string(hook_hits.load(std::memory_order_relaxed)) +
+        " local=" + std::to_string(local_hits.load(std::memory_order_relaxed)) +
+        " writes=" + std::to_string(writes.load(std::memory_order_relaxed));
 }
 
 DWORD WINAPI worker(void*) {
@@ -410,14 +476,21 @@ DWORD WINAPI worker(void*) {
     }
     session_id.store(session, std::memory_order_release);
     context_active.store(context, std::memory_order_release);
-    if (!install_hook()) { log(root, "Game image or hook did not match the supported build; plugin is inactive"); return 0; }
-    log(root, "Exact-build input hook installed");
+    const auto* image = install_hook();
+    if (!image) { log(root, "Game image or hook did not match the supported build; plugin is inactive"); return 0; }
+    log(root, std::string("Exact-build input hook installed for build ") + image->build +
+        (image->hook_world_fallback ? " (input-hook world fallback available)" : ""));
     std::optional<Settings> settings;
-    std::uint64_t config_at{}, report_at{}, previous_session{};
-    bool previous_toggle{}, previous_cancel{}, reported_invalid{};
+    std::uint64_t config_at{}, report_at{}, previous_session{}, previous_worker_at{};
+    std::uint64_t idle_report_at{}, observation_report_at{}, previous_replacements{};
+    std::uint64_t focus_grace_until{};
+    bool previous_toggle{}, previous_cancel{}, reported_invalid{}, previous_foreground{};
     unsigned reports{};
     while (true) {
         const auto now = GetTickCount64();
+        const auto worker_gap_ms = previous_worker_at && now >= previous_worker_at ?
+            now - previous_worker_at : 0;
+        previous_worker_at = now;
         if (now >= config_at) {
             config_at = now + 250;
             const auto next = read_settings(root / "extended.mod.json");
@@ -431,35 +504,63 @@ DWORD WINAPI worker(void*) {
                     stop(SettingsChanged);
                     previous_toggle = binding_down(next->toggle);
                     previous_cancel = binding_down(next->cancel);
-                    log(root, "Settings loaded or changed");
+                    log(root, "Settings loaded or changed enabled=" + std::to_string(next->enabled) +
+                        " toggle_chords=" + std::to_string(next->toggle.count) +
+                        " cancel_chords=" + std::to_string(next->cancel.count));
                 }
             }
             settings = next;
         }
-        const auto current = session();
+        const auto runtime_session = session();
+        const bool runtime_context = context();
+        const bool fallback = image->hook_world_fallback &&
+            (!runtime_session || !runtime_context) &&
+            observed_world_input.load(std::memory_order_acquire);
+        const auto current = fallback ? FallbackSession : runtime_session;
         if (current != previous_session) {
             stop(Session);
+            log(root, "World session changed previous=" + std::to_string(previous_session) +
+                " current=" + std::to_string(current));
             previous_session = current;
+            previous_replacements = 0;
             if (settings) {
                 previous_toggle = binding_down(settings->toggle);
                 previous_cancel = binding_down(settings->cancel);
             }
         }
         const bool foreground = foreground_game();
-        if (!foreground || !current || !context()) stop(foreground ? Session : Focus);
-        if (active.load(std::memory_order_acquire)) {
-            const auto snapshot = input_snapshot(current, now);
-            if (now > last_hook_ms.load(std::memory_order_acquire) + AutorunInput::MaximumAgeMs ||
-                (snapshot.readiness != AutorunInput::Readiness::Busy &&
-                 snapshot.readiness != AutorunInput::Readiness::Ready)) stop(Expired);
+        const bool world_context = runtime_context || fallback;
+        if (foreground != previous_foreground) {
+            if (foreground) focus_grace_until = now + 2000;
+            if (active.load(std::memory_order_acquire))
+                log(root, std::string("Focus ") + (foreground ? "regained" : "lost") +
+                    "; Autorun remains on");
+            previous_foreground = foreground;
         }
-        if (settings && settings->enabled && foreground && current && context()) {
+        if (!current || !world_context) stop(Session);
+        std::string expiry_detail;
+        if (active.load(std::memory_order_acquire) && foreground && now >= focus_grace_until) {
+            const auto checked_at = GetTickCount64();
+            const auto snapshot = input_snapshot(current, checked_at);
+            const auto hook_at = last_hook_ms.load(std::memory_order_acquire);
+            const auto hook_idle_ms = checked_at >= hook_at ? checked_at - hook_at : 0;
+            if (hook_idle_ms > AutorunInput::MaximumAgeMs ||
+                (snapshot.readiness != AutorunInput::Readiness::Busy &&
+                 snapshot.readiness != AutorunInput::Readiness::Ready)) {
+                expiry_detail = " checked_hook_idle_ms=" + std::to_string(hook_idle_ms) +
+                    " checked_input=" + input_status(snapshot);
+                stop(Expired);
+            }
+        }
+        if (settings && settings->enabled && foreground && current && world_context) {
             const bool cancel = binding_down(settings->cancel);
             const bool toggle = binding_down(settings->toggle);
             if (cancel) stop(Backward);
             else if (toggle && !previous_toggle) {
                 if (active.load(std::memory_order_acquire)) stop(Toggle);
-                else if (const auto snapshot = input_snapshot(current, now); snapshot.stable_input) {
+                else if (const auto snapshot = input_snapshot(current, now);
+                    snapshot.stable_input &&
+                    (!fallback || snapshot.idle_ms <= FallbackStartMaximumIdleMs)) {
                     hook_hits.store(0, std::memory_order_relaxed);
                     local_hits.store(0, std::memory_order_relaxed);
                     writes.store(0, std::memory_order_relaxed);
@@ -468,29 +569,52 @@ DWORD WINAPI worker(void*) {
                     deadline_ms.store(now + WorkerDeadlineMs, std::memory_order_release);
                     active.store(true, std::memory_order_release);
                     reports = 0;
-                    log(root, "ON input_replacements=" + std::to_string(snapshot.replacements));
-                } else log(root, "Cannot start: " + input_status(snapshot));
+                    report_at = now + 1000;
+                    log(root, "ON" + diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
+                } else log(root, "Cannot start: " + input_status(snapshot) +
+                    (fallback && snapshot.stable_input ?
+                        " but callback idle_ms=" + std::to_string(snapshot.idle_ms) : "") +
+                    diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
             }
             previous_toggle = toggle;
             previous_cancel = cancel;
         } else if (settings) {
-            previous_toggle = binding_down(settings->toggle);
+            const bool toggle = binding_down(settings->toggle);
+            if (toggle && !previous_toggle && settings->enabled && foreground)
+                log(root, "Toggle ignored" +
+                    diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
+            previous_toggle = toggle;
             previous_cancel = binding_down(settings->cancel);
         }
         if (active.load(std::memory_order_acquire))
             deadline_ms.store(now + WorkerDeadlineMs, std::memory_order_release);
         if (const auto reason = stop_reason.exchange(None, std::memory_order_acq_rel); reason) {
-            log(root, std::string("OFF: ") + reason_name(reason) +
-                " hits=" + std::to_string(hook_hits.load()) +
-                " local=" + std::to_string(local_hits.load()) +
-                " writes=" + std::to_string(writes.load()));
+            log(root, std::string("OFF: ") + reason_name(reason & ~NativeStopBit) +
+                " source=" + (reason & NativeStopBit ? "hook" : "worker") +
+                diagnostic_state(now, current, world_context, foreground, worker_gap_ms) +
+                ((reason & ~NativeStopBit) == Expired && !(reason & NativeStopBit) ? expiry_detail : ""));
         }
-        if (active.load(std::memory_order_acquire) && now >= report_at && reports < 30) {
-            report_at = now + 1000;
-            ++reports;
-            log(root, "Native counts: hits=" + std::to_string(hook_hits.load()) +
-                " local=" + std::to_string(local_hits.load()) +
-                " writes=" + std::to_string(writes.load()));
+        if (active.load(std::memory_order_acquire) && now >= report_at) {
+            report_at = now + (reports < 30 ? 1000 : 10000);
+            if (reports < 30) ++reports;
+            log(root, "Running" +
+                diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
+        }
+        if (current && world_context && foreground && now >= idle_report_at) {
+            idle_report_at = now + 30000;
+            if (!active.load(std::memory_order_acquire))
+                log(root, "Idle" +
+                    diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
+        }
+        if (current && now >= observation_report_at) {
+            observation_report_at = now + 250;
+            const auto snapshot = input_snapshot(current, now);
+            if (snapshot.readiness != AutorunInput::Readiness::Busy &&
+                snapshot.replacements != previous_replacements) {
+                previous_replacements = snapshot.replacements;
+                log(root, "Input source replaced" +
+                    diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
+            }
         }
         Sleep(16);
     }
