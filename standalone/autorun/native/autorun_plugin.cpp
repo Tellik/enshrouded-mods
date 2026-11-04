@@ -25,8 +25,8 @@
 #include <vector>
 
 namespace {
-// Use only ShroudForge's existing package DLL loader and stable ABI-12 world
-// identity functions. Movement injection is entirely owned by this plugin.
+// Use ShroudForge's existing package DLL loader. Movement injection and the
+// exact-build fallback for unavailable world identity are owned by this plugin.
 constexpr std::size_t MovementX = 0x2b8, MovementY = 0x2bc;
 constexpr std::uint8_t Original[]{0x0f, 0xb6, 0xc8, 0x84, 0xc0};
 constexpr auto Signature = "0F B6 C8 84 C0 74 5A 83 F9 01 74 20";
@@ -36,29 +36,28 @@ struct ImageProfile {
     std::uint32_t timestamp;
     std::uint32_t image_size;
     std::uintptr_t hook_rva;
+    bool hook_world_fallback;
 };
 constexpr ImageProfile Images[]{
     {"26082781", "d64966e23b1a458ee6f147bcbceac0b577fa7e39a212f371287d8cc119817882",
-        1792507660u, 44163072u, 0x243b5c},
+        1792507660u, 44163072u, 0x243b5c, false},
     {"26430625", "5d9ef2f140b8ed49e30dbee655841b89d08baec20f799a1817e171a18a850c77",
-        1793791052u, 44298240u, 0x247b6c},
+        1793791052u, 44298240u, 0x247b6c, true},
 };
 constexpr std::uint64_t WorkerDeadlineMs = 250;
+constexpr std::uint64_t FallbackSession = 1ull << 63;
+constexpr std::uint64_t FallbackStartMaximumIdleMs = 100;
 constexpr int NativeStopBit = 0x100;
-constexpr bool ReadOnlyWorldProbe = true;
 
 using SessionIdFn = std::uint64_t (__cdecl*)();
 using ContextActiveFn = bool (__cdecl*)();
 using AbiFn = std::uint32_t (__cdecl*)();
 std::atomic<SessionIdFn> session_id{};
 std::atomic<ContextActiveFn> context_active{};
-std::atomic<bool> installed{}, active{};
+std::atomic<bool> installed{}, active{}, hook_world_fallback{}, observed_world_input{};
 std::atomic<std::uint64_t> active_session{}, deadline_ms{}, last_hook_ms{};
 std::atomic<std::uint64_t> hook_hits{}, local_hits{}, writes{};
 std::atomic<int> stop_reason{};
-std::atomic<const void*> probe_input{};
-std::atomic<std::uint64_t> probe_hits{}, probe_valid_axes{}, probe_forward{}, probe_backward{},
-    probe_neutral{}, probe_replacements{};
 HMODULE plugin_module{};
 
 enum StopReason { None, Toggle, Backward, Session, Expired, InputChanged, SettingsChanged };
@@ -148,37 +147,35 @@ bool apply_forward(void* input, float x, float y) {
 
 void __cdecl on_movement_input(void* input) {
     if (!installed.load(std::memory_order_acquire) || !input) return;
-    if constexpr (ReadOnlyWorldProbe) {
-        probe_hits.fetch_add(1, std::memory_order_relaxed);
-        if (probe_input.exchange(input, std::memory_order_relaxed) != input)
-            probe_replacements.fetch_add(1, std::memory_order_relaxed);
-        float x{}, y{};
-        if (read_axes(input, x, y)) {
-            probe_valid_axes.fetch_add(1, std::memory_order_relaxed);
-            if (y > 0.5f) probe_forward.fetch_add(1, std::memory_order_relaxed);
-            else if (y < -0.5f) probe_backward.fetch_add(1, std::memory_order_relaxed);
-            else probe_neutral.fetch_add(1, std::memory_order_relaxed);
-        }
-        return;
-    }
     const auto session_fn = session_id.load(std::memory_order_acquire);
     const auto context_fn = context_active.load(std::memory_order_acquire);
     if (!session_fn || !context_fn) return;
     const auto now = GetTickCount64();
-    const auto session = session_fn();
-    if (session && context_fn()) observe_input(input, session, now);
+    const auto runtime_session = session_fn();
+    const bool runtime_context = context_fn();
+    const bool fallback = hook_world_fallback.load(std::memory_order_acquire) &&
+        (!runtime_session || !runtime_context);
+    float x{}, y{};
+    if (fallback) {
+        // The exact-build probe observed this callback only in a loaded world.
+        // Require sane movement axes before accepting it as world evidence.
+        if (!read_axes(input, x, y)) { stop(InputChanged, true); return; }
+        observed_world_input.store(true, std::memory_order_release);
+    }
+    const auto session = fallback ? FallbackSession : runtime_session;
+    if (session && (runtime_context || fallback)) observe_input(input, session, now);
     if (!active.load(std::memory_order_acquire)) return;
     hook_hits.fetch_add(1, std::memory_order_relaxed);
     last_hook_ms.store(now, std::memory_order_release);
-    if (!session || session != active_session.load(std::memory_order_acquire) || !context_fn()) {
+    if (!session || session != active_session.load(std::memory_order_acquire) ||
+        (!runtime_context && !fallback)) {
         stop(Session, true);
         return;
     }
     if (now > deadline_ms.load(std::memory_order_acquire)) { stop(Expired, true); return; }
     if (input_snapshot(session, now).stable_input != input) return;
     local_hits.fetch_add(1, std::memory_order_relaxed);
-    float x{}, y{};
-    if (!read_axes(input, x, y)) { stop(InputChanged, true); return; }
+    if (!fallback && !read_axes(input, x, y)) { stop(InputChanged, true); return; }
     if (y < -0.1f) { stop(Backward, true); return; }
     if (apply_forward(input, x, y)) writes.fetch_add(1, std::memory_order_relaxed);
     else stop(InputChanged, true);
@@ -298,6 +295,7 @@ const ImageProfile* install_hook() {
         VirtualFree(payload, 0, MEM_RELEASE);
         return nullptr;
     }
+    hook_world_fallback.store(image->hook_world_fallback, std::memory_order_release);
     installed.store(true, std::memory_order_release);
     return image;
 }
@@ -442,6 +440,7 @@ std::string diagnostic_state(std::uint64_t now, std::uint64_t current,
     const auto deadline = deadline_ms.load(std::memory_order_acquire);
     const auto snapshot = input_snapshot(current, sampled_at);
     return " session=" + std::to_string(current) +
+        " world_gate=" + (current == FallbackSession ? "input-hook" : "kfc") +
         " active_session=" + std::to_string(active_session.load(std::memory_order_acquire)) +
         " context=" + std::to_string(context) +
         " foreground=" + std::to_string(foreground) +
@@ -480,7 +479,7 @@ DWORD WINAPI worker(void*) {
     const auto* image = install_hook();
     if (!image) { log(root, "Game image or hook did not match the supported build; plugin is inactive"); return 0; }
     log(root, std::string("Exact-build input hook installed for build ") + image->build +
-        (ReadOnlyWorldProbe ? " (read-only world probe; Autorun disabled)" : ""));
+        (image->hook_world_fallback ? " (input-hook world fallback available)" : ""));
     std::optional<Settings> settings;
     std::uint64_t config_at{}, report_at{}, previous_session{}, previous_worker_at{};
     std::uint64_t idle_report_at{}, observation_report_at{}, previous_replacements{};
@@ -489,19 +488,6 @@ DWORD WINAPI worker(void*) {
     unsigned reports{};
     while (true) {
         const auto now = GetTickCount64();
-        if constexpr (ReadOnlyWorldProbe) {
-            log(root, "World probe session=" + std::to_string(session()) +
-                " context=" + std::to_string(context()) +
-                " foreground=" + std::to_string(foreground_game()) +
-                " hits=" + std::to_string(probe_hits.load(std::memory_order_relaxed)) +
-                " valid_axes=" + std::to_string(probe_valid_axes.load(std::memory_order_relaxed)) +
-                " forward=" + std::to_string(probe_forward.load(std::memory_order_relaxed)) +
-                " backward=" + std::to_string(probe_backward.load(std::memory_order_relaxed)) +
-                " neutral=" + std::to_string(probe_neutral.load(std::memory_order_relaxed)) +
-                " input_changes=" + std::to_string(probe_replacements.load(std::memory_order_relaxed)));
-            Sleep(5000);
-            continue;
-        }
         const auto worker_gap_ms = previous_worker_at && now >= previous_worker_at ?
             now - previous_worker_at : 0;
         previous_worker_at = now;
@@ -525,7 +511,12 @@ DWORD WINAPI worker(void*) {
             }
             settings = next;
         }
-        const auto current = session();
+        const auto runtime_session = session();
+        const bool runtime_context = context();
+        const bool fallback = image->hook_world_fallback &&
+            (!runtime_session || !runtime_context) &&
+            observed_world_input.load(std::memory_order_acquire);
+        const auto current = fallback ? FallbackSession : runtime_session;
         if (current != previous_session) {
             stop(Session);
             log(root, "World session changed previous=" + std::to_string(previous_session) +
@@ -538,7 +529,7 @@ DWORD WINAPI worker(void*) {
             }
         }
         const bool foreground = foreground_game();
-        const bool world_context = context();
+        const bool world_context = runtime_context || fallback;
         if (foreground != previous_foreground) {
             if (foreground) focus_grace_until = now + 2000;
             if (active.load(std::memory_order_acquire))
@@ -567,7 +558,9 @@ DWORD WINAPI worker(void*) {
             if (cancel) stop(Backward);
             else if (toggle && !previous_toggle) {
                 if (active.load(std::memory_order_acquire)) stop(Toggle);
-                else if (const auto snapshot = input_snapshot(current, now); snapshot.stable_input) {
+                else if (const auto snapshot = input_snapshot(current, now);
+                    snapshot.stable_input &&
+                    (!fallback || snapshot.idle_ms <= FallbackStartMaximumIdleMs)) {
                     hook_hits.store(0, std::memory_order_relaxed);
                     local_hits.store(0, std::memory_order_relaxed);
                     writes.store(0, std::memory_order_relaxed);
@@ -579,6 +572,8 @@ DWORD WINAPI worker(void*) {
                     report_at = now + 1000;
                     log(root, "ON" + diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
                 } else log(root, "Cannot start: " + input_status(snapshot) +
+                    (fallback && snapshot.stable_input ?
+                        " but callback idle_ms=" + std::to_string(snapshot.idle_ms) : "") +
                     diagnostic_state(now, current, world_context, foreground, worker_gap_ms));
             }
             previous_toggle = toggle;
