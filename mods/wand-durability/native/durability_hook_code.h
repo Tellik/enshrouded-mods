@@ -10,7 +10,7 @@ struct HookCode {
 };
 
 inline HookCode make_hook(std::uintptr_t callback) {
-    // At RVA 0x225450, RSP is 16-byte aligned. Save flags and all volatile
+    // At each supported call site, RSP is 16-byte aligned. Save flags and all volatile
     // GPRs (64 bytes), then 32 bytes of shadow space + six XMM registers.
     HookCode result;
     auto& code = result.bytes;

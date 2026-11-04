@@ -33,6 +33,12 @@ constexpr ImageProfile Profiles[]{
     {"dedicated-server", "d7baa768eb00aa895d9f5a1cd8747ccf66858c7b542f50983092b2e3261588ee",
         1792507668u, 31264768u, 0x430a0, 0x430b1,
         "41 B8 FF FF FF FF 48 8B CB 44 8B 08 E8 2F 85 11 00 48 8D 3D"},
+    {"client", "5d9ef2f140b8ed49e30dbee655841b89d08baec20f799a1817e171a18a850c77",
+        1793791052u, 44298240u, 0x229210, 0x229221,
+        "41 B8 FF FF FF FF 48 8B CB 44 8B 08 E8 4F CB 18 00 48 8D 3D"},
+    {"dedicated-server", "f0d824be7fcd48ebfe2458ff5c28da26060c2074e3ec1fcac587e5a1d508aeb2",
+        1793791038u, 31318016u, 0x465d0, 0x465e1,
+        "41 B8 FF FF FF FF 48 8B CB 44 8B 08 E8 BF A3 11 00 48 8D 3D"},
 };
 HMODULE plugin_module{};
 std::atomic<std::uint64_t> session{}, deadline{}, observed{}, charged{}, suppressed{}, unrecognized{}, invalid{};
@@ -204,7 +210,7 @@ bool enabled(const std::filesystem::path& root) {
 DWORD WINAPI worker(void*) {
     const auto root = plugin_dir();
     if (root.empty()) return 0;
-    log(root, "Wand Durability 0.2.2 experimental plugin starting");
+    log(root, "Wand Durability 0.2.3 experimental plugin starting");
     auto* runtime = GetModuleHandleW(L"kfc-runtime.dll");
     for (unsigned i = 0; !runtime && i < 300; ++i) {
         Sleep(100); runtime = GetModuleHandleW(L"kfc-runtime.dll");

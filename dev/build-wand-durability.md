@@ -9,7 +9,7 @@ pinned JSON submodule first.
 cmake -S mods/wand-durability/native -B build/wand-durability -A x64
 cmake --build build/wand-durability --config Release
 ctest --test-dir build/wand-durability -C Release --output-on-failure
-python dev/build/package_wand_durability.py --dll build/wand-durability/Release/wand-durability.dll --out build/wand-durability-0.2.2.zip
+python dev/build/package_wand_durability.py --dll build/wand-durability/Release/wand-durability.dll --out build/wand-durability-0.2.3.zip
 ```
 
 On Linux the same CMake project builds the portable policy tests and the hook

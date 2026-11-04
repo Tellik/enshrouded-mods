@@ -5,7 +5,8 @@
 
 namespace WandDurability {
 // ItemInfo.sequences[].sequenceId for all nine primary wand attacks in
-// build 26082781. Derived from the original resources, not display names.
+// builds 26082781 and Hotfix #5 (game version 1287369). Rechecked against
+// the updated original ItemInfo resources, not display names.
 constexpr std::array<std::uint32_t, 9> WandSequences{
     3820206067u, 2862649328u, 2411228084u, 2611236789u, 422768056u,
     2918815211u, 1422481419u, 1312513725u, 2630637865u};
