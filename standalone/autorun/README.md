@@ -14,10 +14,10 @@ The unreleased development branch also recognizes game build `26430625`.
 Installed ShroudForge 1.7.7 has no profile for that build, so Autorun's draft
 fix uses its exact-build local movement callback to identify in-world input.
 The read-only probe found valid W/S input in the world and no callbacks at the
-main menu. A single-player Proton gameplay check confirmed forward movement,
-toggle and S stops, and continued movement through a brief focus change.
-Dedicated-server testing and the requested one-hour stability check are still
-pending; the v0.3.2 ZIP below does not contain this fix.
+main menu. Single-player and dedicated-server Proton gameplay checks confirmed
+forward movement and toggle and S stops. Movement also continued through a
+brief focus change. The requested one-hour stability check is still pending;
+the v0.3.2 ZIP below does not contain this fix.
 
 Download the `autorun-0.3.2.zip` asset from the
 [Autorun v0.3.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/v0.3.2)

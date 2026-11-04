@@ -8,8 +8,8 @@ unsupported game executable or ShroudForge ABI.
 The published v0.3.2 ZIP supports build `26082781`. This draft branch adds
 unreleased support for build `26430625`, whose world session is not recognized
 by the installed ShroudForge 1.7.7 profile. The new fallback passed a read-only
-input probe and a single-player Proton gameplay check. Dedicated-server and
-longer stability testing are still pending.
+input probe and single-player and dedicated-server Proton gameplay checks.
+The longer stability test is still pending.
 
 ## Download
 
