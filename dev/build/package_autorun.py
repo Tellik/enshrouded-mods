@@ -117,7 +117,7 @@ def verify(path: Path, expected: dict[str, bytes] | None = None) -> None:
         if set(names) != set(selected):
             raise ValueError(f"unexpected ZIP layout: {sorted(set(names) ^ set(selected))}")
         for name, content in selected.items():
-            if archive.read(name) != content:
+            if comparable_sha256(name, archive.read(name)) != comparable_sha256(name, content):
                 raise ValueError(f"packaged file differs from source: {name}")
     print(f"Verified Autorun ZIP: {path}")
 
