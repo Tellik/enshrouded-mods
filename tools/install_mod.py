@@ -105,6 +105,8 @@ def install(archive_path: Path, game: Path, dry_run: bool) -> None:
     ):
         raise ValueError("game folder must contain enshrouded.exe or enshrouded_server.exe")
     with zipfile.ZipFile(archive_path) as archive:
+        if archive.comment.startswith(b"enshrouded-mods:delta-upgrade:"):
+            raise ValueError("delta upgrade ZIP: overlay it onto the existing mod folder as its guide describes; use the full initial ZIP with this installer")
         folder, files = package_files(archive)
         if archive.testzip() is not None:
             raise ValueError("ZIP failed its integrity check")

@@ -15,8 +15,10 @@ files on a client does not make a server run the mod.
    assume that the newest loader is compatible with every mod.
 3. Download the **named ZIP asset** from the mod's release page and the full
    ShroudForge ZIP specified by its guide. GitHub's “Source code” ZIPs are not
-   install packages. If the release provides a `.sha256` file, verify the ZIP
-   before installation.
+   install packages. If the mod offers separate initial-install and upgrade
+   ZIPs, use the initial ZIP for a new installation and follow its guide's
+   stated source version before using the upgrade ZIP. If the release provides
+   a `.sha256` file, verify the ZIP before installation.
 
 On Linux, put the ZIP and matching `.sha256` file in one folder and run
 `sha256sum -c NAME.zip.sha256` there. On Windows, run
@@ -42,8 +44,9 @@ with the `.sha256` file. Replace `NAME` with the actual asset name.
    start, use [WebView2 troubleshooting](#webview2-window-does-not-open) below.
 
 The [official ShroudForge releases](https://github.com/bonsaibauer/shroudforge/releases)
-provide the standard loader. Some mods specify a patched build instead; use
-the exact ZIP linked by that mod's guide.
+provide the standard loader. Use the version specified by the mod's guide;
+the tested Autorun 0.4.0 client used the
+[official stable 1.7.8 ZIP](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.8-build.41706360752).
 
 ## Install ShroudForge on a Linux/Proton client
 
@@ -104,12 +107,26 @@ those windows disabled.
 also contain their own default copy, so extracting an update directly over an
 installed mod can reset your choices.
 
-For a one-folder ZIP whose folder name matches the mod ID, use the optional
+**For a release with separate initial and upgrade ZIPs:** the initial ZIP is a
+complete mod folder and includes default settings. The upgrade ZIP may contain
+only changed files and omit `extended.mod.json`; it must be copied **over an
+existing installation of the version named by the author**, never used for a
+first install or as a replacement folder. Close the game or stop the server,
+back up the existing mod folder, then copy the upgrade ZIP's inner mod folder
+over it and allow replacement of the included files. Confirm `mod.json` shows
+the new version afterward. Autorun 0.4.0's upgrade ZIP is specifically for
+0.3.2 and preserves the existing hotkey and enabled state. If you are on an
+older version, use the full initial ZIP with the installer below.
+
+For a **full** one-folder ZIP whose folder name matches the mod ID, use the optional
 [configuration-preserving installer](../tools/install_mod.py) from this
 repository. Open that link, use GitHub's **Download raw file** action, and
 save `install_mod.py` next to the downloaded mod ZIP. Python 3.9 or newer is
 required. This installer reads the ZIP directly, so an archive tool cannot
 create an extra enclosing folder. It works for first installs and updates.
+Do not pass a delta upgrade ZIP to this installer: it replaces the whole mod
+folder and therefore needs the full ZIP. The installer rejects Autorun's
+marked upgrade ZIP with an explanation.
 Run it while the game or server is stopped:
 
 ```text
