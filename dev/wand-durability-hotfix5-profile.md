@@ -71,3 +71,45 @@ not publish a beta profile, and reported `execution_profile=missing-or-ambiguous
 This is a runtime loader result, not a wand gameplay test. The dedicated-server
 baseline is ready for a separate offline analysis, but no server profile has
 been produced or installed. The running Pterodactyl instance was not altered.
+
+Further offline review used exact Hotfix #4 and #5 client captures. A review
+candidate outside the installed profile catalog applies only the 120 fields
+proved by the native comparison; nine proved RVAs moved by `0xe0`. All 42
+unresolved numeric values happen to equal their Hotfix #4 values, but value
+equality alone is not layout proof. Eight of those gaps now have separate
+static evidence: eight ResourceService map offsets, strides, and the 24-byte
+resource-key extent are used by a byte-identical 349-byte lookup helper reached
+from the paired resource-ID callbacks; the chunk-table offset is read by the
+paired handle callbacks. The original active-Scene iterator independently
+confirms the 144-byte entry stride while reading the same entry-array, count,
+UUID, and ready-state fields in both client builds. Ten of the automatic gaps
+therefore have separate static field evidence.
+These checks do not read live game ownership or complete profile approval.
+
+For the 15 unresolved code-contract checks, the captured witness graph contains
+201 distinct old/new procedure pairs. A separate normalized-code comparison
+matches 199 pairs, misses one capture pair, and finds one different normalized
+body. These are triage results, not proof of call targets or ownership. Exact
+Hotfix #4 and #5 server captures also retain all 11,184 reflected types and
+their layouts; 17,536 static procedure anchors match reciprocally. No
+version-matched Hotfix #4 server KFC was used in those captures, and no server
+runtime profile was produced. The local review artifacts remain outside the
+mod package and the installed ShroudForge profile catalog.
+
+ShroudForge 1.7.8 selects execution and resource/read-owner profiles
+separately. Wand Durability uses its world-kind and world-session APIs, which
+can work without the legacy execution profile if the exact resource/read-owner
+profile configures ECS ownership. That selection is still blocked: the
+installed catalog has no Hotfix #5 read profile. A separate, intentionally
+unloadable review draft retains only the client read sections. Removing optional
+write, service, dependency, item-ID map, and entity-definition UUID contracts
+reduces the relevant automatic field gaps from 42 to 16. Ten have the static
+evidence above; entity generation, three ItemRegistry pointer offsets, and two
+ResourceService map counts still need targeted proof. The server has an
+additional original registered-Scene and thread-registry requirement. No
+review draft has been marked read-validated or installed.
+
+The full server rebase tool refused the offline captures because the exact
+Hotfix #4 server KFC is missing. A filtered attempt to obtain that one file
+from the historical Steam depot stopped at authentication; the earlier QR
+session was not cached. The running dedicated server remains untouched.
