@@ -37,12 +37,10 @@ event values match; their full `ItemInfo` values differ in `equipment` and
 The installed official ShroudForge 1.7.8 stable `kfc-runtime.dll` matches the
 release ZIP and exports `KfcRuntimeAbi`, `KfcRuntimeWorldSessionId`, and
 `KfcRuntimeWorldContextKind`. Its ABI is 12 in the runtime log. The release
-catalog stops at client build 26404966 and server build 26404334. On this
-client, its automatic Hotfix #5 profile discovery reports
-`exact-baseline-executable-not-cached`; it cannot yet provide the authoritative
-session this mod requires. A working exact or proven beta runtime profile and
-live wand gameplay verification remain required. The dedicated server was
-still using ShroudForge 1.7.7 at this inspection and was not changed.
+catalog stops at client build 26404966 and server build 26404334. A working
+exact or proven beta runtime profile and live wand gameplay verification remain
+required. The dedicated server was still using ShroudForge 1.7.7 at this
+inspection and was not changed.
 
 The older exact client executable and its 26082781 runtime capture were
 available for an offline manual rebase attempt. ShroudForge's development tool
@@ -50,6 +48,26 @@ produced a candidate for build 26430625 but reported 171 unresolved target
 checks, including owner, ECS read, resource, and authority/lifetime checks.
 It explicitly did not transfer profile approval or verify semantics. This
 candidate is held outside the production catalog and is not bundled with the
-mod. The matching Hotfix #4 baseline image is unavailable on the inspected
-client and server, so stable 1.7.8's automatic generator cannot close that
-gap at present.
+mod.
+
+The exact Hotfix #4 client executable was subsequently recovered from a local
+test copy: SHA-256
+`ce6fdba63e27744943b695921383a29133285d359e07671f6ca33a47e2147618`
+for build 26404966. The matching Hotfix #4 dedicated-server executable was
+downloaded privately from Steam depot 2278521, manifest
+`7782830484557676320`, selecting only `enshrouded_server.exe`: SHA-256
+`c5c9fe50c6398d2adedd98923c2d04bf9d9b4af64c1447ac167cdf8f874ff84f`
+for build 26404334. These game files are kept out of the repository and mod
+package.
+
+The client baseline was seeded into ShroudForge 1.7.8's local discovery cache,
+then Enshrouded was launched to the main menu. Discovery accepted the exact
+baseline but reported `image-equivalence-not-established`; the mapped PE
+headers changed and its rebase could establish only 120 fields. Another 42
+fields remain unresolved: 20 resource, 12 ECS write, three ECS read, three
+system dependency, two resource write, one building-prop spawn, and one
+service field. ShroudForge wrote a `.v2.unresolved.json` evidence report, did
+not publish a beta profile, and reported `execution_profile=missing-or-ambiguous-profile`.
+This is a runtime loader result, not a wand gameplay test. The dedicated-server
+baseline is ready for a separate offline analysis, but no server profile has
+been produced or installed. The running Pterodactyl instance was not altered.

@@ -8,15 +8,16 @@ count, damage, durability-saving effects, and the world's durability setting.
 This experimental native mod requires ShroudForge's **ABI-12 world identity
 API**. Its supported executable identities are the original client build
 26082781 and dedicated-server build 26083076, plus the exact Hotfix #5
-(game version 1287369) client build 26430625 and matching dedicated-server
-executable inspected on 2026-11-04. It stays inactive if the executable or
+(game version 1287369) client build 26430625 and dedicated-server build
+26430253 inspected on 2026-11-04. It stays inactive if the executable or
 ShroudForge ABI does not match. ShroudForge 1.7.8 stable exports the required
 ABI-12 functions, but it must also select a working game runtime profile to
 report an authoritative world session. The stable 1.7.8 package predates
 Hotfix #5 and does not bundle an exact profile for it. Its automatic profile
-discovery requires a cached, exact executable from its latest known build;
-without that baseline, ShroudForge reports `exact-baseline-executable-not-cached`
-and this mod remains inactive. Check ShroudForge's status before testing.
+discovery needs a cached, exact executable from its latest known build.
+With the Hotfix #4 client baseline supplied, discovery still leaves 42 profile
+fields unresolved and does not create a Hotfix #5 profile. The client mod
+therefore remains inactive. Check ShroudForge's status before testing.
 
 The mod ZIP cannot supply a runtime profile from inside `mods/wand-durability`:
 ShroudForge reads profiles from `shroudforge/runtime/profiles/enshrouded/`.
