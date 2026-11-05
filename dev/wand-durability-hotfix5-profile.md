@@ -76,13 +76,14 @@ Further offline review used exact Hotfix #4 and #5 client captures. A review
 candidate outside the installed profile catalog applies only the 120 fields
 proved by the native comparison; nine proved RVAs moved by `0xe0`. All 42
 unresolved numeric values happen to equal their Hotfix #4 values, but value
-equality alone is not layout proof. Eight of those gaps now have separate
+equality alone is not layout proof. Eleven of those gaps now have separate
 static evidence: eight ResourceService map offsets, strides, and the 24-byte
 resource-key extent are used by a byte-identical 349-byte lookup helper reached
-from the paired resource-ID callbacks; the chunk-table offset is read by the
-paired handle callbacks. The original active-Scene iterator independently
+from the paired resource-ID callbacks; the map key count is read by a paired
+original validator, and the chunk-table offset by the paired handle callbacks.
+The original active-Scene iterator independently
 confirms the 144-byte entry stride while reading the same entry-array, count,
-UUID, and ready-state fields in both client builds. Ten of the automatic gaps
+UUID, and ready-state fields in both client builds. Eleven of the automatic gaps
 therefore have separate static field evidence.
 These checks do not read live game ownership or complete profile approval.
 
@@ -103,9 +104,9 @@ profile configures ECS ownership. That selection is still blocked: the
 installed catalog has no Hotfix #5 read profile. A separate, intentionally
 unloadable review draft retains only the client read sections. Removing optional
 write, service, dependency, item-ID map, and entity-definition UUID contracts
-reduces the relevant automatic field gaps from 42 to 16. Ten have the static
-evidence above; entity generation, three ItemRegistry pointer offsets, and two
-ResourceService map counts still need targeted proof. The server has an
+reduces the relevant automatic field gaps from 42 to 16. Eleven have the static
+evidence above; entity generation, three ItemRegistry pointer offsets, and the
+ResourceService value count still need targeted proof. The server has an
 additional original registered-Scene and thread-registry requirement. No
 review draft has been marked read-validated or installed.
 
