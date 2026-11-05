@@ -43,3 +43,13 @@ client, its automatic Hotfix #5 profile discovery reports
 session this mod requires. A working exact or proven beta runtime profile and
 live wand gameplay verification remain required. The dedicated server was
 still using ShroudForge 1.7.7 at this inspection and was not changed.
+
+The older exact client executable and its 26082781 runtime capture were
+available for an offline manual rebase attempt. ShroudForge's development tool
+produced a candidate for build 26430625 but reported 171 unresolved target
+checks, including owner, ECS read, resource, and authority/lifetime checks.
+It explicitly did not transfer profile approval or verify semantics. This
+candidate is held outside the production catalog and is not bundled with the
+mod. The matching Hotfix #4 baseline image is unavailable on the inspected
+client and server, so stable 1.7.8's automatic generator cannot close that
+gap at present.

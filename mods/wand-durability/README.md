@@ -18,6 +18,13 @@ discovery requires a cached, exact executable from its latest known build;
 without that baseline, ShroudForge reports `exact-baseline-executable-not-cached`
 and this mod remains inactive. Check ShroudForge's status before testing.
 
+The mod ZIP cannot supply a runtime profile from inside `mods/wand-durability`:
+ShroudForge reads profiles from `shroudforge/runtime/profiles/enshrouded/`.
+A separate client/server profile pair could be shipped alongside the mod once
+its full owner and ECS layout is proven against the exact Hotfix #5 images.
+The durability hook addresses alone do not establish that profile. Version
+0.2.3 therefore contains no guessed ShroudForge profile.
+
 ## Download
 
 - The v0.2.3 package is currently a **test build** in the `wand-durability` branch's Windows workflow artifacts. Do not use the older [v0.2.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.2) on Hotfix #5; its exact-build guard rejects the new executables.
