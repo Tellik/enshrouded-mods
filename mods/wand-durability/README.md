@@ -10,26 +10,21 @@ API**. Its supported executable identities are the original client build
 26082781 and dedicated-server build 26083076, plus the exact Hotfix #5
 (game version 1287369) client build 26430625 and dedicated-server build
 26430253 inspected on 2026-11-04. It stays inactive if the executable or
-ShroudForge ABI does not match. ShroudForge 1.7.8 stable exports the required
-ABI-12 functions, but it must also select a working game runtime profile to
-report an authoritative world session. The stable 1.7.8 package predates
-Hotfix #5 and does not bundle an exact profile for it. Its automatic profile
-discovery needs a cached, exact executable from its latest known build.
-With the Hotfix #4 client baseline supplied, discovery still leaves 42 profile
-fields unresolved and does not create a Hotfix #5 profile. The client mod
-therefore remains inactive. Check ShroudForge's status before testing.
+ShroudForge ABI does not match. ShroudForge 1.7.9 stable exports the required
+ABI-12 functions and bundles exact Hotfix #5 client and dedicated-server
+runtime profiles. Both packaged profile identities match the inspected
+executables above. A selected profile and an authoritative world session are
+still required at runtime; package inspection alone does not prove gameplay.
 
-The mod ZIP cannot supply a runtime profile from inside `mods/wand-durability`:
-ShroudForge reads profiles from `shroudforge/runtime/profiles/enshrouded/`.
-A separate client/server profile pair could be shipped alongside the mod once
-its full owner and ECS layout is proven against the exact Hotfix #5 images.
-The durability hook addresses alone do not establish that profile. Version
-0.2.3 therefore contains no guessed ShroudForge profile.
+The mod ZIP does not include ShroudForge runtime profiles. Install ShroudForge
+1.7.9, which supplies the Hotfix #5 profiles under
+`shroudforge/runtime/profiles/enshrouded/`. The earlier 1.7.8 automatic profile
+discovery attempt did not produce a usable Hotfix #5 profile.
 
 ## Download
 
 - The v0.2.3 package is currently a **test build** in the `wand-durability` branch's Windows workflow artifacts. Do not use the older [v0.2.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.2) on Hotfix #5; its exact-build guard rejects the new executables.
-- [ShroudForge 1.7.8 stable](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.8-build.41706360752) provides the required ABI-12 exports. A working Hotfix #5 runtime profile is also necessary for gameplay operation.
+- [ShroudForge 1.7.9 stable](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.9-build.42095151546) provides ABI-12 and the exact Hotfix #5 profiles. Use its release ZIP rather than 1.7.8 for Hotfix #5.
 
 Use the ZIP assets, not GitHub's generated source archives. The Wand Durability
 ZIP contains one `wand-durability` folder and no game files or ShroudForge
@@ -55,7 +50,7 @@ No per-player handshake or manual switching is required.
 
 1. Close Enshrouded. In Steam, choose **Manage → Browse local files** and find
    the folder containing `enshrouded.exe`.
-2. Install ShroudForge 1.7.8 into that folder. On Proton, set
+2. Install ShroudForge 1.7.9 into that folder. On Proton, set
    Steam Launch Options to
    `WINEDLLOVERRIDES="dbghelp=n,b;winmm=n,b" %command%`.
 3. Treat the folder containing `enshrouded.exe` as `./`. Open
@@ -73,7 +68,7 @@ No per-player handshake or manual switching is required.
 1. Stop the server using its control panel and back up its world. Use the
    server's folder containing `enshrouded_server.exe`.
 2. Treat the folder containing `enshrouded_server.exe` as `./`. Install the
-   ShroudForge 1.7.8 ZIP there and copy the mod ZIP's inner `wand-durability/`
+   ShroudForge 1.7.9 ZIP there and copy the mod ZIP's inner `wand-durability/`
    folder into `./mods/`, yielding `./mods/wand-durability/mod.json`. Avoid
    an extra folder named after the ZIP. For a Wine or
    Proton server, set its game-process environment to
@@ -125,11 +120,18 @@ The server's recognized wand counters reached six allowed charges and six
 extra costs skipped. The first player's installed client copy reported a
 remote world and stayed inactive.
 
-Hotfix #5 gameplay and ShroudForge 1.7.8 integration remain unverified. Native
+Hotfix #5 single-player Proton gameplay passed with ShroudForge 1.7.9 and the
+Cryptic Wand's built-in Multishot +1 on 2026-11-08. ShroudForge selected its
+exact client profile, and the mod reported an authoritative world session.
+During the test it recorded seven normal charges and ten extra costs skipped;
+the player observed one durability lost per attack. The separate dedicated
+test server selected its exact Hotfix #5 profile and reported an authoritative
+world session. A connected player observed one durability lost per Cryptic Wand
+Multishot attack on 2026-11-08. Its server log recorded four normal charges
+and six extra costs skipped; the player's client copy reported a remote world
+and stayed inactive. The Pterodactyl live server was not changed. Native
 Windows gameplay, player-hosted co-op, other wands, skill-generated Multishot,
-and travel/death or world-rejoin cases also remain unverified. Version 0.2.3
-must stay a test build until the loader has a working Hotfix #5 profile and
-the one-durability behavior is observed in game.
+and travel/death or world-rejoin cases remain unverified.
 
 ## Implementation and limits
 

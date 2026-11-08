@@ -1,5 +1,26 @@
 # Wand Durability Hotfix #5 test profile (2026-11-04)
 
+## Superseded by ShroudForge 1.7.9 (2026-11-08)
+
+The official [ShroudForge 1.7.9 release](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.9-build.42095151546)
+includes `enshrouded/client/26430625.json` and
+`enshrouded/server/26430253.json` as read-validated runtime profiles. The
+release ZIP was checksum-verified, and its profile SHA-256, image size, and PE
+timestamp match the exact Hotfix #5 client and dedicated-server executables
+used by Wand Durability 0.2.3. The native runtime retains ABI 12 and the world
+context/session exports required by the mod. The 1.7.8 discovery and manual
+review below are historical; do not install those draft profiles. Live profile
+selection and wand gameplay were subsequently checked on 2026-11-08. The
+local Proton client selected `enshrouded-client-26430625`, reported session 5
+with `world_kind=1`, and a Cryptic Wand test showed one durability per attack.
+Its mod log recorded seven normal charges and ten extra costs skipped. The
+separate dedicated test server selected `enshrouded-server-26430253` and
+reported session 5 with `world_kind=1`. On 2026-11-08, a connected player
+observed one durability per Cryptic Wand Multishot attack. The server log
+recorded four normal charges and six extra costs skipped; the local client
+reported `world_kind=2` and stayed inactive. The Pterodactyl-managed live
+server was not modified or restarted.
+
 This is offline evidence for the v0.2.3 test build, not a gameplay result.
 The original client executable came from the installed Steam build 26430625.
 The original dedicated-server executable and KFC files were copied read-only
