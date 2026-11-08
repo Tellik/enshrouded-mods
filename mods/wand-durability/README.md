@@ -129,9 +129,9 @@ test server selected its exact Hotfix #5 profile and reported an authoritative
 world session. A connected player observed one durability lost per Cryptic Wand
 Multishot attack on 2026-11-08. Its server log recorded four normal charges
 and six extra costs skipped; the player's client copy reported a remote world
-and stayed inactive. The Pterodactyl live server was not changed. Native
-Windows gameplay, player-hosted co-op, other wands, skill-generated Multishot,
-and travel/death or world-rejoin cases remain unverified.
+and stayed inactive. Native Windows gameplay, player-hosted co-op, other wands,
+skill-generated Multishot, and travel/death or world-rejoin cases remain
+unverified.
 
 ## Implementation and limits
 

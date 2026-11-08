@@ -18,8 +18,7 @@ separate dedicated test server selected `enshrouded-server-26430253` and
 reported session 5 with `world_kind=1`. On 2026-11-08, a connected player
 observed one durability per Cryptic Wand Multishot attack. The server log
 recorded four normal charges and six extra costs skipped; the local client
-reported `world_kind=2` and stayed inactive. The Pterodactyl-managed live
-server was not modified or restarted.
+reported `world_kind=2` and stayed inactive.
 
 This is offline evidence for the v0.2.3 test build, not a gameplay result.
 The original client executable came from the installed Steam build 26430625.
