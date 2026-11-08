@@ -1,106 +1,98 @@
-# Enshrouded Teleportation Expanded 0.4.0
+# Enshrouded Teleportation Expanded
 
-This ShroudForge mod adds map travel to **505 placed points of interest**
-in Enshrouded client build **26404966**. Install it on each participating client
-and the dedicated server with matching settings. It has 16 category switches and one separate
-**Allow travel into Shroud** switch. It leaves Ancient Spires and placed Flame
-Altars with their normal behavior. Elixir Wells, Fog Nests, Shroud Roots, and
-related sites are excluded from the catalog.
+Add map fast travel to discovered points of interest while keeping the game's
+normal discovery and travel rules. The mod supports 505 placed locations in 16
+independently controlled categories. A separate **Allow travel into Shroud**
+switch applies to every category.
 
-The packaged configuration enables Flame Sites, Ruins, Settlements, and
-Exploration, and leaves Gem Forges, Night Sanctums, and travel into Shroud off.
-For the first gameplay test, use the all-enabled test configuration: all 16
-categories and Shroud travel are on. The Shroud rule takes precedence over
-*every* category when turned off, so a Gem Forge or a cave classified inside
-Shroud cannot be selected for expanded travel even if its category is on.
+Ancient Spires and placed Flame Altars retain their normal behavior. Elixir
+Wells, Fog Nests, Shroud Roots, and related sites are excluded.
 
-## Settings
+## Configuration
 
-Edit `mods/enshrouded-teleportation-expanded/extended.mod.json` beside
-the client or server executable, or use the ShroudForge mod settings UI. Keep
-the server and client switches the same. Each category has one
-true/false switch. The 16 categories are Flame Shrines, Flame Sanctums, Gem
-Forges, Night Sanctums, Dungeons, Hollow Halls, Ancient Vaults, Obelisks,
-Tombs, Balefire Sites, Mines, Caves, Enemy Camps, Villages/Towns, Survivor
-Camps, and Farms. The 17th switch is the Shroud rule. Restart and run
-ShroudForge's asset preparation after a setting change.
+Set the switches in `mods/enshrouded-teleportation-expanded/extended.mod.json`
+beside each game executable, or in ShroudForge's mod settings UI. Install and
+configure the mod on every participating client and the dedicated server.
+Restart and prepare game assets after changing a switch.
 
-`LOCATIONS.txt` lists every eligible location and marks destinations blocked
-when Shroud travel is off. The build-specific classification samples the
-game's gameplay Shroud volume near each map label. ShroudForge does not expose
-the game's live destination fog query to this mod. The static rule errs toward
-blocking sites near Shroud, and it does not update when a world event clears
-Shroud. Confirm the arrival point and Shroud timer in game before treating a
-site as safe. The all-enabled test config deliberately bypasses that guard.
+| Group | Switches | Packaged default |
+| --- | --- | --- |
+| Flame Sites | Flame Shrines, Flame Sanctums | On |
+| Shroud Sites | Gem Forges, Night Sanctums | Off |
+| Ruins | Dungeons, Hollow Halls, Ancient Vaults, Obelisks, Tombs, Balefire Sites | On |
+| Exploration | Mines, Caves | On |
+| Settlements | Enemy Camps, Villages/Towns, Survivor Camps, Farms | On |
+| Shroud rule | Allow travel into Shroud | Off |
 
-The selected map labels get travel-enabled marker types that do not appear
-above unexplored fog. These added marker types stay outside the game's fixed
-map-filter list. The server receives matching map-label templates and the
-client receives their marker definitions. The mod does not uncover the map,
-move players directly, or edit world saves. The game still handles discovery,
-travel, arrival, and server acceptance.
+When Shroud travel is off, a location classified inside Shroud is excluded even
+if its category is on. `LOCATIONS.txt` lists every eligible location and its
+Shroud classification. The classification samples the game's Shroud volume
+near each map label. It errs toward blocking sites near Shroud and does not
+update when a world event clears Shroud. Check the arrival point and Shroud
+timer before relying on an enabled Shroud destination.
 
-## Build and test status
+The mod gives selected map labels travel-enabled marker types that remain
+hidden under unexplored fog. The game still decides whether a player has
+discovered a destination, performs the travel, and accepts it on the server.
+The mod does not uncover the map, move players directly, or edit saves.
 
-The catalog is tied to client build **26404966** and dedicated-server build
-**26404334**. It checks the client registry, map-label scenes, template
-collections, and source POI positions before changing assets. If those change,
-preparation fails and the catalog needs regeneration.
+## Install
 
-In a disposable game copy, ShroudForge prepared **250** destinations with the
-packaged defaults and **505** with every switch on. Readback of the all-enabled
-build confirmed 505 selected scene changes and cloned templates, 15 new travel
-marker types, and unchanged source marker types. Version 0.3.0 crashed when
-loading a world because its 15 new marker types raised the game's 40-entry
-map-filter list from 36 entries to 51. Version 0.3.1 leaves the 15 travel
-types out of that list; readback confirms 36 filterable types and 21 travel
-types. These are asset checks, not gameplay or multiplayer proof.
+1. Close the game and stop the dedicated server before installing or changing
+   settings.
+2. Put the packaged `enshrouded-teleportation-expanded` folder at
+   `mods/enshrouded-teleportation-expanded` beside the client and server
+   executables. Do not add a second enclosing folder.
+3. Keep the client and server category and Shroud switches aligned. Prepare
+   assets with ShroudForge, then start the game and server. Check the
+   ShroudForge log for `Teleportation Expanded: enabled ... POIs` and a
+   successful asset commit.
 
-Version 0.4.1 prepares against the current dedicated-server build with all
-switches on. The prior server build 26083076 used a smaller template table;
-the new build matches the client table. Readback confirms that the same 505
-scene entities point to the same new template IDs on both sides.
+The packaged defaults enable 14 categories and exclude Shroud locations,
+selecting 250 destinations on the current builds. With all 16 categories on
+and Shroud travel off, the catalog selects 268 clear destinations. Turning
+Shroud travel on selects all 505. These counts
+describe asset preparation; verify travel in game.
 
-The earlier Shrine/Sanctum prototype worked in single player and with one
-modded client on an unmodded dedicated server. In a 0.3.1 single-player test,
-the world loaded and the player reported successful travel to multiple enabled
-locations, including a Hollow Hall and a Gem Forge. The game log records six
-travel events and a normal shutdown. The player also confirmed that an
-undiscovered destination could not be selected. On an unmodded dedicated server,
-the 0.3.1 Fast Travel option was missing. On the remote test server updated to
-dedicated build 26404334 (game revision 1285601), one modded client joined and
-the player confirmed dedicated-server travel worked. Its log recorded arrivals
-at a Small Flint Mine, Former Fort Hope, Old Mistburry Catacombs, and a Gem
-Forge. The Shroud-off rule, two-client behavior, and per-player discovery
-still need gameplay testing.
+## Compatibility and test status
 
-## Install and first test
+The catalog was generated from client build **26404966**. Its map-marker,
+scene, template, and placement checks also pass on client build **26430625**
+and dedicated-server build **26430253**. On those newer builds, isolated
+Shroud-off preparation selected 268 locations on both sides; Shroud-on
+preparation selected 505 on both sides. Both preparations committed using the
+patched ShroudForge 1.7.7 asset loader.
 
-1. Stop the game and test server. Keep the mod at
-   `mods/enshrouded-teleportation-expanded` beside both executables.
-2. For this first test, set every category and `allowIntoShroud` to `true` on
-   both sides. Run ShroudForge preparation for the client and server. Each log should report
-   `enabled 505 POIs across 505 eligible locations`.
-3. In a disposable world, try a discovered Shrine/Sanctum, Gem Forge, and one
-   destination from a broad category. Confirm each travel option and arrival.
-4. Check a destination still under unexplored fog with a different player if
-   possible. After initial travel testing, turn Shroud travel off, prepare
-   again, and verify a known Shroud destination is no longer offered while a
-   clear destination in its category still is.
-5. Repeat on a test dedicated server with two modded clients to verify
-   per-player discovery and simultaneous travel.
+Single-player travel to several enabled POIs and rejection of an undiscovered
+POI were confirmed on the earlier client build. A modded client also joined
+the remote dedicated test server on build **26404334**, traveled to multiple
+POIs, and arrived safely. On the current client and dedicated-server builds,
+the player reported that clear POI travel works and Shroud POIs are unavailable
+with Shroud travel off in both worlds. With Shroud travel on, the player
+reported safe travel to discovered Shroud and clear POIs in both worlds.
+Two-client discovery behavior has not yet been tested.
+
+On this Linux/Wine test setup, stock ShroudForge **1.7.9** has exact profiles
+for the newer game builds but fails a fresh asset publish with `Access denied
+(os error 5)`, even when this is the only asset mod. The previously patched
+1.7.7 loader completes the same publish. An already applied asset patch can
+remain usable after upgrading ShroudForge; its applied status alone does not
+prove new settings were published. Check for a successful commit after every
+configuration change. See the upstream [Wine asset publishing issue](https://github.com/bonsaibauer/shroudforge/issues/75)
+and [proposed fix](https://github.com/bonsaibauer/shroudforge/pull/73).
+
+The source checks expected map-marker, scene, template, and location data
+before changing assets. It stops preparation if those assumptions change in
+a future game build.
+
+## Upgrading older configurations
 
 When upgrading from 0.1.x or 0.2.x, `tools/migrate_config.py` carries the mod
 enabled state and compatible settings into the category configuration. It
-replaces old per-location defaults with the new category defaults. If a group
-contains mixed custom location values, migration stops so you can choose a
-category value manually. The installer saves the previous mod folder under
-`shroudforge/backups/manual-mod-installs/`.
+stops when a category contains mixed custom location values so you can choose
+its category value yourself. The config-preserving installer saves the old
+mod folder under `shroudforge/backups/manual-mod-installs/`.
 
-## Regenerating after a game update
-
-`tools/generate_locations.py` rebuilds `src/locations.lua`,
-`extended.mod.json`, and `LOCATIONS.txt` from client POI templates, scene
-placements, marker registry, English localization, icon resources, and the
-Shroud volume model and tile content. Review the catalog and repeat isolated
-preparation and in-game tests for every supported game build.
+`tools/generate_locations.py` rebuilds the catalog and configuration from the
+game data after a future incompatible update. Review the result and repeat
+asset and gameplay tests before distributing it.
