@@ -47,6 +47,9 @@ The [official ShroudForge releases](https://github.com/bonsaibauer/shroudforge/r
 provide the standard loader. Use the version specified by the mod's guide;
 the tested Autorun 0.4.0 client used the
 [official stable 1.7.8 ZIP](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.8-build.41706360752).
+For Enshrouded Hotfix #5, [Wand Durability 0.2.3](https://github.com/Tellik/enshrouded-mods/blob/wand-durability/mods/wand-durability/README.md)
+was tested on a Proton client and a separate Wine dedicated test server with
+the [official stable 1.7.9 ZIP](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.9-build.42095151546).
 
 ## Install ShroudForge on a Linux/Proton client
 
