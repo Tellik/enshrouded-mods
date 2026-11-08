@@ -1,4 +1,4 @@
-# Wand Durability v0.2.3 test build
+# Wand Durability v0.2.3
 
 Apply the normal single-shot durability cost once per primary wand attack,
 including attacks with built-in Multishot or skill-generated bonus projectiles.
@@ -23,7 +23,7 @@ discovery attempt did not produce a usable Hotfix #5 profile.
 
 ## Download
 
-- The v0.2.3 package is currently a **test build** in the `wand-durability` branch's Windows workflow artifacts. Do not use the older [v0.2.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.2) on Hotfix #5; its exact-build guard rejects the new executables.
+- Download the [v0.2.3 release ZIP](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.3). Do not use the older [v0.2.2 prerelease](https://github.com/Tellik/enshrouded-mods/releases/tag/wand-durability-v0.2.2) on Hotfix #5; its exact-build guard rejects the new executables.
 - [ShroudForge 1.7.9 stable](https://github.com/bonsaibauer/shroudforge/releases/tag/v1.7.9-build.42095151546) provides ABI-12 and the exact Hotfix #5 profiles. Use its release ZIP rather than 1.7.8 for Hotfix #5.
 
 Use the ZIP assets, not GitHub's generated source archives. The Wand Durability
